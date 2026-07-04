@@ -1,0 +1,29 @@
+{
+  "name": "casacontrol",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "tablet": "yarn workspace @casacontrol/tablet start",
+    "phone": "yarn workspace @casacontrol/phone start",
+    "tablet:android": "yarn workspace @casacontrol/tablet android",
+    "phone:android": "yarn workspace @casacontrol/phone android",
+    "typecheck": "yarn workspaces run typecheck",
+    "lint": "yarn workspaces run lint",
+    "clean": "rimraf node_modules apps/*/node_modules packages/*/node_modules",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
+    "rimraf": "^5.0.5",
+    "typescript": "~5.3.3"
+  },
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=18"
+  }
+}

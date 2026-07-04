@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-css-interop/babel.js b/node_modules/react-native-css-interop/babel.js
+index d84e52b..8158245 100644
+--- a/node_modules/react-native-css-interop/babel.js
++++ b/node_modules/react-native-css-interop/babel.js
+@@ -9,8 +9,10 @@ module.exports = function () {
+           importSource: "react-native-css-interop",
+         },
+       ],
+-      // Use this plugin in reanimated 4 and later
+-      "react-native-worklets/plugin",
++      // Removed "react-native-worklets/plugin": that plugin ships with the
++      // reanimated-4 "react-native-worklets" package, which is NOT installed.
++      // This project uses reanimated 3 (Expo SDK 52); babel-preset-expo adds
++      // "react-native-reanimated/plugin" automatically. Patched via patch-package.
+     ],
+   };
+ };
