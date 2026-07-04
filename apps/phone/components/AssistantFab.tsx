@@ -11,14 +11,23 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import { COLORS, DEFAULT_SUGGESTIONS, type AnthropicMessage } from '@casacontrol/shared';
 import { runAssistantChat, getSuggestions } from '../lib/assistant';
+import { useVoiceInput } from '../lib/useVoiceInput';
 import { RichText } from './RichText';
 
 interface Turn {
   role: 'user' | 'assistant';
   text: string;
 }
+
+/** Recognition languages for voice input. The recognizer needs to be told which. */
+const LANGS = [
+  { code: 'en-US', label: 'EN' },
+  { code: 'fr-FR', label: 'FR' },
+] as const;
+const LANG_KEY = 'voice_lang';
 
 /** Floating assistant button → a multi-turn chat that can act on the home. */
 export function AssistantFab() {
@@ -28,7 +37,15 @@ export function AssistantFab() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [history, setHistory] = useState<AnthropicMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
+  const [lang, setLang] = useState<string>('en-US');
   const scrollRef = useRef<ScrollView>(null);
+
+  // Restore the last-used voice language.
+  useEffect(() => {
+    void SecureStore.getItemAsync(LANG_KEY).then((v) => {
+      if (v) setLang(v);
+    });
+  }, []);
 
   // Fetch fresh, state-aware suggestions each time the sheet opens empty.
   useEffect(() => {
@@ -67,6 +84,28 @@ export function AssistantFab() {
     setText('');
   };
 
+  // Voice input → fills the box live, and auto-sends on the final transcript.
+  const { recognizing, toggle: toggleVoice, abort } = useVoiceInput({
+    onTranscript: (t, isFinal) => {
+      setText(t);
+      if (isFinal) void submit(t);
+    },
+    onError: (msg) => setTurns((t) => [...t, { role: 'assistant', text: msg }]),
+  });
+
+  // Stop listening if the sheet is dismissed mid-dictation.
+  useEffect(() => {
+    if (!open && recognizing) abort();
+  }, [open, recognizing, abort]);
+
+  const cycleLang = () => {
+    const idx = (LANGS.findIndex((l) => l.code === lang) + 1) % LANGS.length;
+    const next = (LANGS[idx] ?? LANGS[0]).code;
+    setLang(next);
+    void SecureStore.setItemAsync(LANG_KEY, next);
+  };
+  const langLabel = LANGS.find((l) => l.code === lang)?.label ?? 'EN';
+
   return (
     <>
       <Pressable
@@ -87,6 +126,12 @@ export function AssistantFab() {
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-ink text-xl font-bold">Ask CasaControl</Text>
               <View className="flex-row items-center gap-1">
+                <Pressable
+                  onPress={cycleLang}
+                  className="px-2.5 py-1 mr-1 rounded-full bg-offWhite border border-black/5 active:opacity-60"
+                >
+                  <Text className="text-ink/60 text-xs font-semibold">{langLabel}</Text>
+                </Pressable>
                 {turns.length > 0 && (
                   <Pressable onPress={newChat} className="p-1 flex-row items-center active:opacity-60">
                     <Ionicons name="add-circle-outline" size={20} color={COLORS.muted} />
@@ -147,13 +192,22 @@ export function AssistantFab() {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder="Ask or command…"
+                placeholder={recognizing ? 'Listening…' : 'Ask, command, or tap the mic…'}
                 placeholderTextColor={COLORS.muted}
                 onSubmitEditing={() => submit()}
                 returnKeyType="send"
-                editable={!busy}
+                editable={!busy && !recognizing}
                 className="flex-1 bg-offWhite rounded-full px-4 py-3 text-ink border border-black/5"
               />
+              <Pressable
+                onPress={() => toggleVoice(lang)}
+                disabled={busy}
+                className={`w-12 h-12 rounded-full items-center justify-center active:opacity-80 disabled:opacity-40 ${
+                  recognizing ? 'bg-red-500' : 'bg-offWhite border border-black/5'
+                }`}
+              >
+                <Ionicons name="mic" size={22} color={recognizing ? '#FFFFFF' : COLORS.ink} />
+              </Pressable>
               <Pressable
                 onPress={() => submit()}
                 disabled={busy}

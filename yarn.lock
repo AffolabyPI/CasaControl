@@ -3178,6 +3178,11 @@ expo-secure-store@~14.0.0:
   resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-14.0.1.tgz#8953d5966430f5ff262f4d99e7551205870078d7"
   integrity sha512-QUS+j4+UG4jRQalgnpmTvvrFnMVLqPiUZRzYPnG3+JrZ5kwVW2w6YS3WWerPoR7C6g3y/a2htRxRSylsDs+TaQ==
 
+expo-speech-recognition@1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/expo-speech-recognition/-/expo-speech-recognition-1.1.1.tgz#e6172b16898d47983116cff058ee806de91680d5"
+  integrity sha512-snQ1rsmQOXUIkkvwW3eCxSZ1FHYQ0lNLeguDTGX0Xg0xOug7zhQDk0/HppAvagfennQBYvQfAHvzUe936aK2LQ==
+
 expo-sqlite@~15.0.0:
   version "15.0.6"
   resolved "https://registry.yarnpkg.com/expo-sqlite/-/expo-sqlite-15.0.6.tgz#8d8256a69c114aaaef3210ba40cea015f8ac5da1"

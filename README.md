@@ -31,6 +31,9 @@ No cloud backend. Your data stays on your network.
 - **Claude assistant** — a tool-use agent (`claude-opus-4-8`) that can search &
   play music, control the speaker/PS5, answer questions about home state, and
   chain several actions in one request. Multi-turn chat with state-aware suggestions.
+- **Voice control** — speak commands to the assistant via on-device speech-to-text
+  (English or French, toggleable). The transcript feeds the same tool-use agent, so
+  *"mets un peu de Daft Punk"* acts on your home just like typing it.
 - **Reliability** — an Android foreground service keeps the hub reachable while
   the tablet is idle.
 
@@ -55,7 +58,7 @@ The phone ↔ hub link is a **hand-rolled HTTP/1.1 server** on the tablet
 
 > **Why a custom dev client, not Expo Go?** Several native modules aren't in Expo
 > Go: an on-device TCP/HTTP server, UDP (Wake-on-LAN), mDNS, BLE, media-volume
-> control, and a foreground service. Build once with `expo prebuild` +
+> control, on-device speech recognition, and a foreground service. Build once with `expo prebuild` +
 > `expo run:android`, then iterate on JS as usual.
 
 ## Getting started
@@ -131,6 +134,11 @@ Tap the ✨ button on the phone. It's a **tool-use agent**: it can call home too
 current state. Example: *"turn on the speaker and play some Daft Punk"* powers the
 BOOM and starts the music. Set your Anthropic key in **Settings** (SecureStore) —
 the app calls Claude directly from the device, so treat the key as personal.
+
+Tap the **mic** to speak instead of type — on-device speech-to-text
+(`expo-speech-recognition`) transcribes your command and sends it to the agent.
+An **EN / FR** toggle picks the recognition language; Claude replies in whichever
+you spoke.
 
 ## Remote access (Tailscale)
 
