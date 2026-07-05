@@ -78,9 +78,9 @@ export class HubClient {
     }
   }
 
-  private async fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  private async fetchJson<T>(path: string, init?: RequestInit, timeoutMs = this.timeoutMs): Promise<T> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         ...init,
@@ -142,11 +142,17 @@ export class HubClient {
     await this.sendCommand({ action: 'system.setVolume', volume: v });
   }
 
-  sendCommand(action: CasaAction): Promise<{ ok: boolean; result?: unknown }> {
-    return this.fetchJson('/command', {
-      method: 'POST',
-      body: JSON.stringify(action),
-    });
+  /**
+   * Run a CasaAction on the hub. `timeoutMs` overrides the default abort window
+   * for slow actions — BLE speaker wake/sleep can take ~10s (connect + GATT
+   * write), well past the 5s default, and would otherwise abort mid-success.
+   */
+  sendCommand(action: CasaAction, timeoutMs?: number): Promise<{ ok: boolean; result?: unknown }> {
+    return this.fetchJson(
+      '/command',
+      { method: 'POST', body: JSON.stringify(action) },
+      timeoutMs,
+    );
   }
 
   // --- Adaptive device profiles ---

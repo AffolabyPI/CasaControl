@@ -276,7 +276,12 @@ function SpeakerPower() {
     setBusy(which);
     setMsg(null);
     try {
-      await hubClient.sendCommand({ action: which === 'wake' ? 'speaker.wake' : 'speaker.sleep' });
+      // BLE connect + GATT write can take ~10s; give it 15s before aborting so a
+      // slow-but-successful wake doesn't surface as "Aborted".
+      await hubClient.sendCommand(
+        { action: which === 'wake' ? 'speaker.wake' : 'speaker.sleep' },
+        15_000,
+      );
       setMsg(which === 'wake' ? 'Speaker powering on…' : 'Speaker powering off…');
     } catch (e) {
       setMsg(`Couldn't reach the speaker: ${String(e instanceof Error ? e.message : e)}`);

@@ -35,6 +35,7 @@
           "bluetoothAlwaysPermission": false
         }
       ],
+      "./plugins/withBleNeverForLocation",
       [
         "expo-build-properties",
         {
