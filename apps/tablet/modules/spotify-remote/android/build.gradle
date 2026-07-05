@@ -1,0 +1,28 @@
+apply plugin: 'com.android.library'
+
+group = 'com.casacontrol.spotifyremote'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+useExpoPublishing()
+
+android {
+  namespace "expo.modules.spotifyremote"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // Spotify App Remote (vendored classes.jar — a jar from a library module is
+  // merged into the final app, unlike a raw .aar which would not be packaged).
+  // `api` so the Spotify classes are visible to the app for packaging.
+  api fileTree(dir: "libs", include: ["*.jar"])
+  // App Remote's default JsonMapper is gson-backed.
+  implementation 'com.google.code.gson:gson:2.10.1'
+}

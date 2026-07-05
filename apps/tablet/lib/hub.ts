@@ -12,7 +12,13 @@ import { ps5Status, ps5Wake, printerStatus } from './devices/controllers';
 import { startHubForegroundService, stopHubForegroundService } from './foregroundService';
 import { getSystemVolumePercent, setSystemVolumePercent } from './systemVolume';
 import { discoverSpeaker, wakeUeBoom, sleepUeBoom, wakeSpeaker } from './bleSpeaker';
-import { playContext, queueTrack, searchSpotify, listDevices } from './spotifyControl';
+import {
+  playContext,
+  queueTrack,
+  searchSpotify,
+  listDevices,
+  connectRemote,
+} from './spotifyControl';
 
 const log = createLogger('hub');
 let server: HubServer | null = null;
@@ -84,6 +90,7 @@ export function startHub(): void {
     spotifyDevices: listDevices,
     spotifySearch: searchSpotify,
     spotifyStart: playContext,
+    spotifyRemoteConnect: connectRemote,
     runCommand,
   });
   server.start(HUB_SERVER_PORT);

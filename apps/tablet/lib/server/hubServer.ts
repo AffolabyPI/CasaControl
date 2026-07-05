@@ -22,6 +22,7 @@ export interface HubHandlers {
   spotifyDevices: () => Promise<unknown>;
   spotifySearch: (query: string) => Promise<unknown>;
   spotifyStart: (uri: string) => Promise<unknown>;
+  spotifyRemoteConnect: () => Promise<unknown>;
   runCommand: (action: CasaAction) => Promise<unknown>;
 }
 
@@ -185,6 +186,10 @@ export class HubServer {
       if (method === 'GET' && path === '/spotify/start') {
         if (!query.uri) return httpResponse(400, { ok: false, error: 'need uri' });
         return httpResponse(200, await this.handlers.spotifyStart(query.uri));
+      }
+      // One-time App Remote authorization (call with the tablet unlocked).
+      if (method === 'GET' && path === '/spotify/remote-connect') {
+        return httpResponse(200, await this.handlers.spotifyRemoteConnect());
       }
       // Generic BLE write for discovery/debugging:
       //   /ble/write?id=MAC&svc=UUID&chr=UUID&val=BASE64&resp=1

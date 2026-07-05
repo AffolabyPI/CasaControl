@@ -21,8 +21,10 @@ No cloud backend. Your data stays on your network.
 ## Features
 
 - **Spotify** — search, play/queue, browse playlists, playback + volume control.
-  Can **start music from nothing** even when no Spotify device is active (the hub
-  wakes the tablet's Spotify and starts playback on it).
+  Can **start music from nothing** even when no Spotify device is active, and even
+  while the tablet is **off and locked** — the hub drives the tablet's local
+  Spotify via the App Remote SDK (falling back to the Web API when a device is
+  already active). Needs Premium + a one-time in-app authorization.
 - **Bluetooth speaker (UE BOOM)** — power on/off over BLE (reverse-engineered UE
   power characteristic), and volume control via the tablet's media stream.
 - **PS5** — Wake-on-LAN + status.
@@ -101,8 +103,11 @@ Key values:
 | `EXPO_PUBLIC_TABLET_BT_MAC` | tablet | tablet's own BT MAC, **paired** with the BOOM |
 | `EXPO_PUBLIC_HUB_LOCAL_IP` / `_TAILSCALE_IP` | phone | default hub addresses (editable in-app) |
 
-For Spotify, register the redirect URIs `casacontrol://callback` and
-`casacontrol-hub://callback` in the Spotify developer dashboard.
+For Spotify, register the redirect URIs `casacontrol://callback`,
+`casacontrol-hub://callback`, and `casacontrol-hub://spotify-callback` in the
+Spotify developer dashboard. For App Remote (locked cold-start playback), also add
+the Android package `com.casacontrol.hub` with your build's signing SHA1, and
+authorize once from the tablet while unlocked (`GET /spotify/remote-connect`).
 
 ## Monorepo layout
 
