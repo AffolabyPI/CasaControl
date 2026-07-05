@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createLogger } from '@casacontrol/shared';
 import { connectionStore } from '../lib/connection';
 import { themeStore, useThemeColors, useIsDark, useThemeVars } from '../lib/theme';
+import { useMediaNotification } from '../lib/mediaNotification';
 import { logEnvStatus } from '../lib/env';
 
 const log = createLogger('app');
@@ -17,6 +18,9 @@ export default function RootLayout() {
   const theme = useThemeColors();
   const isDark = useIsDark();
   const themeVars = useThemeVars();
+
+  // Mirror hub playback into a lock-screen / shade media notification.
+  useMediaNotification();
 
   useEffect(() => {
     log.info('RootLayout mounted');
