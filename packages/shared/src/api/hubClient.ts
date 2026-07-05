@@ -161,12 +161,16 @@ export class HubClient {
     return this.fetchJson('/profiles/save', { method: 'POST', body: JSON.stringify(profile) });
   }
 
-  /** Run one action of a stored profile against a target device. */
+  /**
+   * Run one action of a stored profile against a target device. The hub returns
+   * the executor result flat: `{ ok, detail }` (with `error` on a hub-level
+   * failure), not wrapped in `{ result }`.
+   */
   executeProfile(
     profileId: string,
     actionName: string,
     target: { targetMac?: string; targetIp?: string; bleDeviceId?: string } = {},
-  ): Promise<{ ok: boolean; result?: { ok: boolean; detail: string }; error?: string }> {
+  ): Promise<{ ok: boolean; detail?: string; error?: string }> {
     return this.fetchJson('/profiles/execute', {
       method: 'POST',
       body: JSON.stringify({ profileId, actionName, target }),

@@ -126,8 +126,11 @@ export const profilesStore = createStore<ProfilesState>((set, get) => ({
       targetMac: device.mac ?? undefined,
       targetIp: device.ip,
     });
-    if (res.ok === false) return { ok: false, detail: res.error ?? 'Hub error' };
-    return res.result ?? { ok: false, detail: 'No result' };
+    // The hub returns the executor result flat: { ok, detail }. Surface its real
+    // detail (e.g. "Sent Wake-on-LAN to …" or "No … responder found") instead of
+    // a generic "Hub error".
+    const detail = res.detail ?? res.error ?? (res.ok ? 'Done' : 'Hub error');
+    return { ok: res.ok !== false, detail };
   },
 
   remove: async (profileId) => {
