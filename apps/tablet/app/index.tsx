@@ -2,9 +2,10 @@ import { useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '@casacontrol/shared';
+import { COLORS, IDLE_DIM_MS } from '@casacontrol/shared';
 import { store, useSpotifyStore, useSpotifyLogin } from '../lib/spotify';
 import { useIdleDim } from '../lib/useIdleDim';
+import { useHubMode } from '../lib/hubMode';
 import { NowPlaying } from '../components/NowPlaying';
 import { TopBar } from '../components/TopBar';
 import { DeviceGrid } from '../components/DeviceGrid';
@@ -17,7 +18,8 @@ import { QuickActions } from '../components/QuickActions';
  */
 export default function HubHome() {
   const isAuthed = useSpotifyStore((s) => s.isAuthed);
-  const { onActivity } = useIdleDim();
+  const mode = useHubMode();
+  const { onActivity } = useIdleDim(0.2, IDLE_DIM_MS, mode === 'dashboard');
 
   useEffect(() => {
     if (isAuthed) store.getState().startPolling();

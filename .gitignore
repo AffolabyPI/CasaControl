@@ -16,6 +16,9 @@ web-build/
 /ios
 apps/*/android/
 apps/*/ios/
+# Local Expo modules: keep the source, drop native build output
+apps/*/modules/*/android/build/
+apps/*/modules/*/android/.cxx/
 *.apk
 *.aab
 *.ipa

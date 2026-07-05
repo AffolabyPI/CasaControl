@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Battery from 'expo-battery';
 import * as Network from 'expo-network';
 import { COLORS } from '@casacontrol/shared';
+import { useHubMode, toggleHubMode } from '../lib/hubMode';
 
 export function TopBar() {
   const now = useClock();
   const battery = useBattery();
   const wifi = useWifi();
+  const mode = useHubMode();
 
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const date = now.toLocaleDateString([], {
@@ -25,6 +27,19 @@ export function TopBar() {
       </View>
 
       <View className="flex-row items-center gap-6">
+        <Pressable
+          onPress={toggleHubMode}
+          className="flex-row items-center rounded-full border border-white/10 px-4 py-2 active:opacity-70"
+        >
+          <Ionicons
+            name={mode === 'private' ? 'lock-closed' : 'tv'}
+            size={20}
+            color={mode === 'private' ? COLORS.gold : COLORS.muted}
+          />
+          <Text className="text-white/70 ml-2">
+            {mode === 'private' ? 'Private' : 'Always on'}
+          </Text>
+        </Pressable>
         <View className="flex-row items-center">
           <Ionicons
             name={wifi ? 'wifi' : 'wifi-outline'}
