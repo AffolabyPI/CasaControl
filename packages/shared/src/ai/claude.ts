@@ -23,6 +23,14 @@ import type {
   Ps5Status,
   SpotifyPlaybackState,
 } from '../types';
+import {
+  buildResearchSystemPrompt,
+  buildResearchQuery,
+  parseResearchResult,
+  WEB_SEARCH_TOOL,
+  type ResearchInput,
+  type ResearchResult,
+} from './tools/researchDeviceProfile';
 
 const MESSAGES_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -231,28 +239,10 @@ interface RawMessageResponse {
   stop_reason?: string;
 }
 
-/** Pull the first balanced JSON object out of a text blob. */
-export function extractJsonObject(text: string): unknown {
-  const start = text.indexOf('{');
-  if (start === -1) throw new Error('No JSON object in response');
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === '{') depth++;
-    else if (text[i] === '}') {
-      depth--;
-      if (depth === 0) return JSON.parse(text.slice(start, i + 1));
-    }
-  }
-  throw new Error('Unbalanced JSON in response');
-}
-
-/** Pull the first JSON array out of a text blob (for suggestions). */
-export function extractJsonArray(text: string): unknown {
-  const start = text.indexOf('[');
-  const end = text.lastIndexOf(']');
-  if (start === -1 || end <= start) throw new Error('No JSON array in response');
-  return JSON.parse(text.slice(start, end + 1));
-}
+// Imported for local use and re-exported to keep existing imports working (and
+// to avoid a cycle with the research tool, which also needs extractJsonObject).
+import { extractJsonObject, extractJsonArray } from './json';
+export { extractJsonObject, extractJsonArray };
 
 const VALID_ACTIONS = new Set<string>(Object.keys(ACTION_SPEC));
 
@@ -401,6 +391,26 @@ export class ClaudeClient {
       /* fall through to defaults */
     }
     return DEFAULT_SUGGESTIONS;
+  }
+
+  /**
+   * Research a control profile for an unknown device using web search. The
+   * caller MUST have checked the profile store (findMatchingProfile) and gotten
+   * null before calling this — research never runs for a device we already have
+   * an approved profile for. Returns a validated profile or {found:false}.
+   */
+  async researchDeviceProfile(device: ResearchInput): Promise<ResearchResult> {
+    const data = await this.post({
+      max_tokens: 2048,
+      system: buildResearchSystemPrompt(),
+      tools: [WEB_SEARCH_TOOL],
+      messages: [{ role: 'user', content: buildResearchQuery(device) }],
+    });
+    const text = (data.content ?? [])
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text ?? '')
+      .join('\n');
+    return parseResearchResult(text);
   }
 
   /** Interpret a natural-language command into a single CasaAction (legacy). */
