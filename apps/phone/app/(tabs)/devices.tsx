@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react';
-import { View, Text, SectionList, RefreshControl, Pressable } from 'react-native';
+import { View, Text, SectionList, RefreshControl, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { type Device, type DeviceCategory } from '@casacontrol/shared';
+import { type Device, type DeviceAction, type DeviceCategory } from '@casacontrol/shared';
 import { devicesStore, useDevices } from '../../lib/devices';
-import { useConnection } from '../../lib/connection';
+import { useConnection, hubClient } from '../../lib/connection';
 import { useThemeColors } from '../../lib/theme';
 import { Ps5Card } from '../../components/Ps5Card';
 import { PrinterCard } from '../../components/PrinterCard';
@@ -125,26 +125,79 @@ export default function Devices() {
 
 function DeviceRow({ device }: { device: Device }) {
   const theme = useThemeColors();
+  // Prefer the model/vendor for the subtitle when we detected one.
+  const subtitle =
+    device.model ?? (device.vendor ? `${device.vendor} device` : device.hostname ?? '');
   return (
-    <Pressable className="flex-row items-center bg-surface rounded-xl px-4 py-3 mb-2 border border-line/5 active:opacity-70">
-      <Ionicons
-        name={KIND_ICON[device.kind] ?? 'hardware-chip'}
-        size={22}
-        color={theme.goldDark}
-      />
-      <View className="flex-1 ml-3">
-        <Text className="text-ink font-semibold" numberOfLines={1}>
-          {device.name}
-        </Text>
-        <Text className="text-ink/40 text-xs">
-          {device.ip}
-          {device.hostname ? ` · ${device.hostname}` : ''}
-        </Text>
+    <View className="bg-surface rounded-xl px-4 py-3 mb-2 border border-line/5">
+      <View className="flex-row items-center">
+        <Ionicons
+          name={KIND_ICON[device.kind] ?? 'hardware-chip'}
+          size={22}
+          color={theme.goldDark}
+        />
+        <View className="flex-1 ml-3">
+          <Text className="text-ink font-semibold" numberOfLines={1}>
+            {device.name}
+          </Text>
+          <Text className="text-ink/40 text-xs" numberOfLines={1}>
+            {device.ip}
+            {subtitle ? ` · ${subtitle}` : ''}
+          </Text>
+        </View>
+        <View
+          className="w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: device.online ? theme.online : theme.offline }}
+        />
       </View>
-      <View
-        className="w-2.5 h-2.5 rounded-full"
-        style={{ backgroundColor: device.online ? theme.online : theme.offline }}
-      />
+
+      {device.suggestedActions && device.suggestedActions.length > 0 ? (
+        <View className="flex-row flex-wrap mt-2.5 ml-8">
+          {device.suggestedActions.map((a) => (
+            <ActionChip key={a.id} device={device} action={a} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function ActionChip({ device, action }: { device: Device; action: DeviceAction }) {
+  const theme = useThemeColors();
+  const runnable = !!action.command;
+
+  const onPress = () => {
+    if (action.command) {
+      hubClient
+        .sendCommand(action.command)
+        .then((res) => {
+          const r = res.result as { ok?: boolean; error?: string } | undefined;
+          if (r && r.ok === false) Alert.alert(action.label, r.error ?? 'Command failed');
+        })
+        .catch((e) => Alert.alert(action.label, String(e)));
+    } else {
+      Alert.alert(action.label, action.hint ?? `Not wired up for ${device.name} yet.`);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`flex-row items-center rounded-full px-3 py-1.5 mr-2 mb-1 active:opacity-70 ${
+        runnable ? 'bg-gold' : 'border border-line/10'
+      }`}
+    >
+      {action.icon ? (
+        <Ionicons
+          name={action.icon as keyof typeof Ionicons.glyphMap}
+          size={13}
+          color={runnable ? theme.accentInk : theme.muted}
+          style={{ marginRight: 5 }}
+        />
+      ) : null}
+      <Text className={`text-xs font-semibold ${runnable ? 'text-accentInk' : 'text-ink/50'}`}>
+        {action.label}
+      </Text>
     </Pressable>
   );
 }

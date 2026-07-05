@@ -20,6 +20,22 @@ export type DeviceKind =
   | 'spotify'
   | 'generic';
 
+/**
+ * A suggested thing you can do with a discovered device. `command` is set when
+ * the hub can run it directly (e.g. wake a PS5); `hint` is set when it's a
+ * suggestion that needs setup we don't have yet (e.g. HDMI-CEC on an Android TV).
+ */
+export interface DeviceAction {
+  id: string;
+  label: string;
+  /** Ionicons name hint for the phone UI. */
+  icon?: string;
+  /** If present, the phone can run this via the hub /command endpoint. */
+  command?: CasaAction;
+  /** If present (and no command), shown as guidance rather than a live button. */
+  hint?: string;
+}
+
 export interface Device {
   /** Stable id (usually the MAC, falling back to the IP). */
   id: string;
@@ -28,8 +44,14 @@ export interface Device {
   mac: string | null;
   kind: DeviceKind;
   category: DeviceCategory;
-  /** Human-friendly label (mDNS service name or hostname). */
+  /** Human-friendly label (smart name from mDNS TXT / model / hostname). */
   name: string;
+  /** Manufacturer, when known (from mDNS TXT or MAC OUI). */
+  vendor?: string;
+  /** Model string, when known (e.g. "SHIELD Android TV", "AppleTV5,3"). */
+  model?: string;
+  /** Things the user can do with this device (some runnable, some suggestions). */
+  suggestedActions?: DeviceAction[];
   /** Epoch milliseconds of the last successful discovery/ping. */
   lastSeen: number;
   online: boolean;

@@ -2,9 +2,18 @@
  * SQLite persistence for discovered devices (expo-sqlite async API).
  */
 import * as SQLite from 'expo-sqlite';
-import type { Device, DeviceCategory, DeviceKind } from '@casacontrol/shared';
+import type { Device, DeviceAction, DeviceCategory, DeviceKind } from '@casacontrol/shared';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+/** Add a column if the table predates it (existing installs). */
+async function ensureColumn(db: SQLite.SQLiteDatabase, name: string): Promise<void> {
+  try {
+    await db.execAsync(`ALTER TABLE devices ADD COLUMN ${name} TEXT;`);
+  } catch {
+    /* column already exists */
+  }
+}
 
 async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
@@ -21,9 +30,16 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
           name      TEXT NOT NULL,
           lastSeen  INTEGER NOT NULL,
           online    INTEGER NOT NULL,
-          meta      TEXT
+          meta      TEXT,
+          vendor    TEXT,
+          model     TEXT,
+          actions   TEXT
         );
       `);
+      // Migrate older tables that lack the enrichment columns.
+      await ensureColumn(db, 'vendor');
+      await ensureColumn(db, 'model');
+      await ensureColumn(db, 'actions');
       return db;
     });
   }
@@ -41,6 +57,9 @@ interface Row {
   lastSeen: number;
   online: number;
   meta: string | null;
+  vendor: string | null;
+  model: string | null;
+  actions: string | null;
 }
 
 function rowToDevice(r: Row): Device {
@@ -52,6 +71,9 @@ function rowToDevice(r: Row): Device {
     kind: r.kind as DeviceKind,
     category: r.category as DeviceCategory,
     name: r.name,
+    ...(r.vendor ? { vendor: r.vendor } : {}),
+    ...(r.model ? { model: r.model } : {}),
+    ...(r.actions ? { suggestedActions: JSON.parse(r.actions) as DeviceAction[] } : {}),
     lastSeen: r.lastSeen,
     online: r.online === 1,
     meta: r.meta ? (JSON.parse(r.meta) as Record<string, unknown>) : undefined,
@@ -62,8 +84,8 @@ function rowToDevice(r: Row): Device {
 export async function upsertDevice(device: Device): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO devices (id, ip, hostname, mac, kind, category, name, lastSeen, online, meta)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO devices (id, ip, hostname, mac, kind, category, name, lastSeen, online, meta, vendor, model, actions)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        ip=excluded.ip,
        hostname=COALESCE(excluded.hostname, devices.hostname),
@@ -73,7 +95,10 @@ export async function upsertDevice(device: Device): Promise<void> {
        name=excluded.name,
        lastSeen=excluded.lastSeen,
        online=excluded.online,
-       meta=COALESCE(excluded.meta, devices.meta);`,
+       meta=COALESCE(excluded.meta, devices.meta),
+       vendor=COALESCE(excluded.vendor, devices.vendor),
+       model=COALESCE(excluded.model, devices.model),
+       actions=COALESCE(excluded.actions, devices.actions);`,
     [
       device.id,
       device.ip,
@@ -85,6 +110,9 @@ export async function upsertDevice(device: Device): Promise<void> {
       device.lastSeen,
       device.online ? 1 : 0,
       device.meta ? JSON.stringify(device.meta) : null,
+      device.vendor ?? null,
+      device.model ?? null,
+      device.suggestedActions ? JSON.stringify(device.suggestedActions) : null,
     ],
   );
 }

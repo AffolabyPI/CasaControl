@@ -17,6 +17,7 @@ import {
   type Device,
   type DeviceKind,
 } from '@casacontrol/shared';
+import { enrichDevice } from './enrich';
 
 const PING_TIMEOUT_MS = 400;
 const PING_CONCURRENCY = 64;
@@ -121,12 +122,15 @@ function scanServiceType(
       // Classify by the TYPE currently being scanned; fall back to name
       // heuristics (e.g. a PS5 advertising an otherwise-generic service).
       const kind = classifyService(type, service.name);
-      const device = kindToDevice(kind, {
+      const base = kindToDevice(kind, {
         ip,
         hostname: service.host ?? null,
         name: service.name,
         mac: null,
       });
+      // Enrich with a smart name + vendor/model + suggested actions from the
+      // TXT records (which carry model/friendly-name info we'd otherwise drop).
+      const device = enrichDevice(base, { serviceType: type, txt: service.txt });
       found.set(device.id, device);
     });
 
