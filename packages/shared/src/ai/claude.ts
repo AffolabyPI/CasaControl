@@ -400,16 +400,29 @@ export class ClaudeClient {
    * an approved profile for. Returns a validated profile or {found:false}.
    */
   async researchDeviceProfile(device: ResearchInput): Promise<ResearchResult> {
-    const data = await this.post({
-      max_tokens: 2048,
-      system: buildResearchSystemPrompt(),
-      tools: [WEB_SEARCH_TOOL],
-      messages: [{ role: 'user', content: buildResearchQuery(device) }],
-    });
-    const text = (data.content ?? [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text ?? '')
-      .join('\n');
+    const messages: AnthropicMessage[] = [
+      { role: 'user', content: buildResearchQuery(device) },
+    ];
+    let text = '';
+    // Server-side web_search makes the API return stop_reason "pause_turn" while
+    // it runs searches; keep re-sending the turn until it finishes (end_turn),
+    // accumulating the final text (which holds the JSON).
+    for (let round = 0; round < 5; round++) {
+      const data = await this.post({
+        max_tokens: 4096,
+        system: buildResearchSystemPrompt(),
+        tools: [WEB_SEARCH_TOOL],
+        messages,
+      });
+      const content = (data.content ?? []) as RawContentBlock[];
+      messages.push({ role: 'assistant', content: content as ContentBlock[] });
+      const turnText = content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text ?? '')
+        .join('\n');
+      if (turnText) text = turnText;
+      if (data.stop_reason !== 'pause_turn') break;
+    }
     return parseResearchResult(text);
   }
 
