@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useStore } from 'zustand';
+import { hubClient } from './connection';
 import {
   SpotifyClient,
   createSpotifyStore,
@@ -68,7 +69,15 @@ const tokenProvider: TokenProvider = {
 };
 
 export const spotifyClient = new SpotifyClient(tokenProvider);
-export const store = createSpotifyStore(spotifyClient);
+
+// When the bare play button finds no Web-API device (tablet cold/locked), ask
+// the hub to cold-start the tablet's local Spotify via App Remote. (No import
+// cycle: connection.ts does not import this module.)
+export const store = createSpotifyStore(spotifyClient, undefined, async () => {
+  const res = await hubClient.sendCommand({ action: 'spotify.resumeLocal' });
+  const r = res.result as { ok?: boolean } | undefined;
+  return res.ok !== false && r?.ok === true;
+});
 
 // Hydrate auth flag on module load.
 void loadTokens().then((t) => store.getState().setAuthed(!!t));

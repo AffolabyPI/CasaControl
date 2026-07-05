@@ -15,6 +15,7 @@ import { createLogger, type SpotifyDevice, type SpotifySearchResults } from '@ca
 import { spotifyClient, store as spotify } from './spotify';
 import {
   playUri as remotePlayUri,
+  resumeSpotify,
   connectSpotify,
   isSpotifyConnected,
 } from '../modules/spotify-remote';
@@ -127,6 +128,30 @@ export async function playContext(
   await spotify.getState().refresh();
   log.info(`started ${uri} on ${t2.name}`);
   return { ok: true, device: t2.name };
+}
+
+/**
+ * Resume playback on the tablet's LOCAL Spotify via App Remote. This is the
+ * cold-start path for the phone's bare play button: when Spotify's Web API has
+ * no available device (tablet locked/idle), the phone asks the hub to run this,
+ * which drives the local Spotify app directly — working even behind a lock
+ * screen once App Remote has been authorized once.
+ */
+export async function resumeLocal(): Promise<{ ok: boolean; error?: string }> {
+  if (!SPOTIFY_CLIENT_ID) return { ok: false, error: 'No Spotify client ID configured' };
+  try {
+    if (!isSpotifyConnected()) {
+      await connectSpotify(SPOTIFY_CLIENT_ID, SPOTIFY_REDIRECT_URI);
+    }
+    await resumeSpotify();
+    await delay(900);
+    await spotify.getState().refresh();
+    log.info('resumed local Spotify via App Remote');
+    return { ok: true };
+  } catch (e) {
+    log.warn(`resumeLocal failed: ${String(e)}`);
+    return { ok: false, error: String(e) };
+  }
 }
 
 /** Queue a track URI (starts playback first if nothing is active). */

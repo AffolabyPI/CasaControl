@@ -47,6 +47,7 @@ async function execute(action: CasaAction): Promise<string> {
     case 'spotify.transfer':
     case 'spotify.playContext':
     case 'spotify.queue':
+    case 'spotify.resumeLocal':
     case 'system.setVolume':
     case 'speaker.wake':
     case 'speaker.sleep':

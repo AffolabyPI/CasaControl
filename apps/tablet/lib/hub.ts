@@ -28,6 +28,7 @@ import {
   searchSpotify,
   listDevices,
   connectRemote,
+  resumeLocal,
 } from './spotifyControl';
 
 const log = createLogger('hub');
@@ -56,6 +57,8 @@ export async function runCommand(action: CasaAction): Promise<unknown> {
       return { ok: true };
     case 'spotify.playContext':
       return playContext(action.uri);
+    case 'spotify.resumeLocal':
+      return resumeLocal();
     case 'spotify.queue':
       return queueTrack(action.uri);
     case 'system.setVolume':

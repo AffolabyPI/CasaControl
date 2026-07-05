@@ -168,6 +168,9 @@ export type CasaAction =
   | { action: 'spotify.playContext'; uri: string }
   /** Add a track URI to the play queue. */
   | { action: 'spotify.queue'; uri: string }
+  /** Resume the tablet's LOCAL Spotify via App Remote — cold-starts playback
+   * while the tablet is locked, when the Web API has no available device. */
+  | { action: 'spotify.resumeLocal' }
   /** Set the tablet's own media volume (0–100) — controls the Bluetooth
    * speaker (e.g. UE BOOM) when Spotify's API won't. */
   | { action: 'system.setVolume'; volume: number }

@@ -132,6 +132,8 @@ const ACTION_SPEC: Record<CasaActionName, string> = {
   'spotify.transfer': 'move playback to a device — { "deviceId": string }',
   'spotify.playContext': 'start playing a track/playlist/album URI — { "uri": string }',
   'spotify.queue': 'add a track URI to the queue — { "uri": string }',
+  'spotify.resumeLocal':
+    "resume playback on the tablet's local Spotify (cold-start while locked) — no params",
   'system.setVolume':
     'set the tablet/Bluetooth-speaker volume when Spotify volume is disallowed — { "volume": 0-100 }',
   'speaker.wake': 'power ON the Bluetooth speaker (UE BOOM) over BLE — no params',

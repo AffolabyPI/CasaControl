@@ -45,6 +45,13 @@ export type SpotifyStore = StoreApi<SpotifyState>;
 export function createSpotifyStore(
   client: SpotifyClient,
   pollMs: number = SPOTIFY_POLL_MS,
+  /**
+   * Optional platform hook invoked when `play()` finds NO Web-API device to
+   * play on (tablet cold/locked). The phone wires this to the hub, which
+   * cold-starts the tablet's local Spotify via App Remote. Resolve `true` if it
+   * started playback (then we skip the "no device" error).
+   */
+  onColdStart?: () => Promise<boolean>,
 ): SpotifyStore {
   let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -107,18 +114,36 @@ export function createSpotifyStore(
             // 404 "No active device found" — Spotify has no device to resume on
             // (nothing played recently). Pick an available device and start there.
             if (e instanceof SpotifyApiError && e.status === 404) {
-              let devices = get().devices;
-              if (devices.length === 0) {
-                devices = await client.getDevices();
-                set({ devices });
-              }
+              // Always re-fetch fresh: the cached list may name a device that has
+              // since vanished (e.g. the tablet dropped off Connect while locked).
+              // Trusting the stale cache here would transfer to a dead id and 404
+              // again — never reaching the cold-start fallback below.
+              const devices = await client.getDevices();
+              set({ devices });
               const target = devices.find((d) => d.isActive) ?? devices[0];
-              if (!target) {
-                throw new Error(
-                  'No Spotify device available — open Spotify on your phone, the tablet, or a speaker first.',
-                );
+              if (target) {
+                try {
+                  await client.transferPlayback(target.id, true);
+                  await get().refresh();
+                  await get().refreshDevices();
+                  return;
+                } catch {
+                  // The listed device wouldn't accept playback (stale/gone) —
+                  // fall through to the cold-start path.
+                }
               }
-              await client.transferPlayback(target.id, true);
+              // Nothing usable registered with Spotify's Web API (the tablet is
+              // cold or locked). Ask the platform to cold-start local playback —
+              // on the phone this drives the tablet's Spotify over App Remote,
+              // which works even behind a lock screen.
+              if (onColdStart && (await onColdStart())) {
+                await get().refresh();
+                await get().refreshDevices();
+                return;
+              }
+              throw new Error(
+                'No Spotify device available — open Spotify on your phone, the tablet, or a speaker first.',
+              );
             } else {
               throw e;
             }
