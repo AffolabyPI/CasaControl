@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme tokens as space-separated RGB channels so Tailwind's
+   rgb(var(--x) / <alpha-value>) can apply opacity utilities. */
+:root {
+  --bg: 247 246 242; /* offWhite  #F7F6F2 */
+  --surface: 255 255 255; /* white    #FFFFFF */
+  --ink: 20 20 15; /* ink      #14140F */
+  --ink-soft: 31 30 23; /* inkSoft  #1F1E17 */
+  --line: 0 0 0; /* hairline (used at low opacity) */
+}
+
+.dark {
+  --bg: 18 18 16; /* #121210 */
+  --surface: 32 31 26; /* #201F1A */
+  --ink: 244 243 239; /* #F4F3EF */
+  --ink-soft: 232 231 225; /* #E8E7E1 */
+  --line: 255 255 255; /* light hairline on dark */
+}

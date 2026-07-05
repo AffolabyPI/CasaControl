@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { COLORS } from '@casacontrol/shared';
+import { useThemeColors } from '../../lib/theme';
 import { store, useSpotifyStore, useSpotifyLogin } from '../../lib/spotify';
 import { hubClient, useConnection } from '../../lib/connection';
 import { ConnectionBadge } from '../../components/ConnectionBadge';
@@ -21,6 +21,7 @@ export default function Remote() {
   const devices = useSpotifyStore((s) => s.devices);
   const error = useSpotifyStore((s) => s.error);
   const { promptAsync, isReady, clientConfigured } = useSpotifyLogin();
+  const theme = useThemeColors();
 
   // Poll only while this screen is focused and we're logged in.
   useFocusEffect(
@@ -33,7 +34,7 @@ export default function Remote() {
   if (!isAuthed) {
     return (
       <SafeAreaView className="flex-1 bg-offWhite items-center justify-center px-8">
-        <Ionicons name="musical-notes" size={64} color={COLORS.gold} />
+        <Ionicons name="musical-notes" size={64} color={theme.gold} />
         <Text className="text-ink text-2xl font-bold mt-4">Connect Spotify</Text>
         <Text className="text-ink/50 text-center mt-2">
           Log in to control playback from your phone.
@@ -43,7 +44,7 @@ export default function Remote() {
           onPress={() => promptAsync()}
           className="mt-8 bg-gold px-8 py-3 rounded-full active:opacity-80 disabled:opacity-40"
         >
-          <Text className="text-ink font-semibold text-base">Log in with Spotify</Text>
+          <Text className="text-accentInk font-semibold text-base">Log in with Spotify</Text>
         </Pressable>
         {!clientConfigured && (
           <Text className="text-danger text-xs mt-4 text-center">
@@ -96,12 +97,13 @@ export default function Remote() {
 }
 
 function AlbumArt({ url }: { url: string | null }) {
+  const theme = useThemeColors();
   return (
     <View className="w-64 h-64 rounded-2xl overflow-hidden bg-ink/10 border border-gold/30 items-center justify-center">
       {url ? (
         <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
       ) : (
-        <Ionicons name="disc" size={96} color={COLORS.muted} />
+        <Ionicons name="disc" size={96} color={theme.muted} />
       )}
     </View>
   );
@@ -133,6 +135,7 @@ function ProgressBar({
   // that gate, dragMs latches and the bar freezes.
   const [dragMs, setDragMs] = useState<number | null>(null);
   const dragging = useRef(false);
+  const theme = useThemeColors();
 
   const elapsed = isPlaying ? progressMs + (now - fetchedAt) : progressMs;
   const clamped = durationMs > 0 ? Math.min(elapsed, durationMs) : 0;
@@ -146,9 +149,9 @@ function ProgressBar({
         maximumValue={Math.max(1, durationMs)}
         value={shown}
         disabled={durationMs <= 0}
-        minimumTrackTintColor={COLORS.gold}
-        maximumTrackTintColor="#00000022"
-        thumbTintColor={COLORS.goldDark}
+        minimumTrackTintColor={theme.gold}
+        maximumTrackTintColor={theme.track}
+        thumbTintColor={theme.goldDark}
         onSlidingStart={() => {
           dragging.current = true;
         }}
@@ -171,25 +174,26 @@ function ProgressBar({
 
 function Controls({ isPlaying }: { isPlaying: boolean }) {
   const s = store.getState();
+  const theme = useThemeColors();
   return (
     <View className="flex-row items-center justify-center mt-8 gap-6">
       {/* Restart current song (seek to 0) — separate from "previous track". */}
       <Pressable onPress={() => s.restart()} className="active:opacity-60 items-center">
-        <Ionicons name="play-back" size={28} color={COLORS.muted} />
+        <Ionicons name="play-back" size={28} color={theme.muted} />
         <Text className="text-ink/40 text-[10px] mt-0.5">restart</Text>
       </Pressable>
       <Pressable onPress={() => s.previous()} className="active:opacity-60 items-center">
-        <Ionicons name="play-skip-back" size={38} color={COLORS.ink} />
+        <Ionicons name="play-skip-back" size={38} color={theme.ink} />
         <Text className="text-ink/40 text-[10px] mt-0.5">prev</Text>
       </Pressable>
       <Pressable
         onPress={() => (isPlaying ? s.pause() : s.play())}
         className="bg-gold w-20 h-20 rounded-full items-center justify-center active:opacity-80"
       >
-        <Ionicons name={isPlaying ? 'pause' : 'play'} size={40} color={COLORS.ink} />
+        <Ionicons name={isPlaying ? 'pause' : 'play'} size={40} color={theme.accentInk} />
       </Pressable>
       <Pressable onPress={() => s.next()} className="active:opacity-60 items-center">
-        <Ionicons name="play-skip-forward" size={38} color={COLORS.ink} />
+        <Ionicons name="play-skip-forward" size={38} color={theme.ink} />
         <Text className="text-ink/40 text-[10px] mt-0.5">next</Text>
       </Pressable>
     </View>
@@ -198,6 +202,7 @@ function Controls({ isPlaying }: { isPlaying: boolean }) {
 
 function VolumeSlider({ volume, supported }: { volume: number; supported: boolean }) {
   const hubReachable = useConnection((s) => s.reachable);
+  const theme = useThemeColors();
   const [local, setLocal] = useState(volume);
   const [hubVol, setHubVol] = useState<number | null>(null);
 
@@ -227,7 +232,7 @@ function VolumeSlider({ volume, supported }: { volume: number; supported: boolea
   return (
     <View className="w-full mt-10">
       <View className="flex-row items-center gap-3" style={{ opacity: enabled ? 1 : 0.4 }}>
-        <Ionicons name="volume-low" size={20} color={COLORS.muted} />
+        <Ionicons name="volume-low" size={20} color={theme.muted} />
         <Slider
           style={{ flex: 1, height: 40 }}
           minimumValue={0}
@@ -235,16 +240,16 @@ function VolumeSlider({ volume, supported }: { volume: number; supported: boolea
           value={value}
           step={1}
           disabled={!enabled}
-          minimumTrackTintColor={COLORS.gold}
-          maximumTrackTintColor="#00000022"
-          thumbTintColor={COLORS.goldDark}
+          minimumTrackTintColor={theme.gold}
+          maximumTrackTintColor={theme.track}
+          thumbTintColor={theme.goldDark}
           onValueChange={(v) => (usingHub ? setHubVol(v) : setLocal(v))}
           onSlidingComplete={(v) => {
             if (usingHub) void hubClient.setSystemVolume(v);
             else void store.getState().setVolume(v);
           }}
         />
-        <Ionicons name="volume-high" size={20} color={COLORS.muted} />
+        <Ionicons name="volume-high" size={20} color={theme.muted} />
         <Text className="text-ink/50 text-xs w-8 text-right">{Math.round(value)}</Text>
       </View>
       {usingHub && (
@@ -263,6 +268,7 @@ function VolumeSlider({ volume, supported }: { volume: number; supported: boolea
 
 function SpeakerPower() {
   const hubReachable = useConnection((s) => s.reachable);
+  const theme = useThemeColors();
   const [busy, setBusy] = useState<null | 'wake' | 'sleep'>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -288,15 +294,15 @@ function SpeakerPower() {
           onPress={() => send('wake')}
           className="flex-1 flex-row items-center justify-center py-3 rounded-xl bg-gold active:opacity-80 disabled:opacity-50"
         >
-          <Ionicons name="power" size={18} color={COLORS.ink} />
-          <Text className="text-ink font-semibold ml-2">{busy === 'wake' ? 'Waking…' : 'Power on'}</Text>
+          <Ionicons name="power" size={18} color={theme.accentInk} />
+          <Text className="text-accentInk font-semibold ml-2">{busy === 'wake' ? 'Waking…' : 'Power on'}</Text>
         </Pressable>
         <Pressable
           disabled={!hubReachable || busy !== null}
           onPress={() => send('sleep')}
-          className="flex-1 flex-row items-center justify-center py-3 rounded-xl bg-white border border-black/10 active:opacity-70 disabled:opacity-50"
+          className="flex-1 flex-row items-center justify-center py-3 rounded-xl bg-surface border border-line/10 active:opacity-70 disabled:opacity-50"
         >
-          <Ionicons name="power" size={18} color={COLORS.muted} />
+          <Ionicons name="power" size={18} color={theme.muted} />
           <Text className="text-ink/70 font-semibold ml-2">{busy === 'sleep' ? 'Off…' : 'Power off'}</Text>
         </Pressable>
       </View>
@@ -317,6 +323,7 @@ function DevicePicker({
   devices: { id: string; name: string; type: string; isActive: boolean }[];
   activeId: string | null;
 }) {
+  const theme = useThemeColors();
   if (devices.length === 0) return null;
   return (
     <View className="w-full mt-10">
@@ -328,16 +335,16 @@ function DevicePicker({
             key={d.id}
             onPress={() => store.getState().transfer(d.id)}
             className={`flex-row items-center py-3 px-4 rounded-xl mb-2 ${
-              active ? 'bg-gold/20 border border-gold' : 'bg-white border border-black/5'
+              active ? 'bg-gold/20 border border-gold' : 'bg-surface border border-line/5'
             }`}
           >
             <Ionicons
               name={d.type === 'Computer' ? 'laptop' : 'volume-medium'}
               size={20}
-              color={active ? COLORS.goldDark : COLORS.muted}
+              color={active ? theme.goldDark : theme.muted}
             />
             <Text className="text-ink ml-3 flex-1">{d.name}</Text>
-            {active && <Ionicons name="checkmark-circle" size={20} color={COLORS.goldDark} />}
+            {active && <Ionicons name="checkmark-circle" size={20} color={theme.goldDark} />}
           </Pressable>
         );
       })}

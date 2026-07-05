@@ -4,15 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import {
-  COLORS,
   type SpotifyTrack,
   type SpotifyPlaylist,
   type SpotifySearchResults,
 } from '@casacontrol/shared';
 import { searchMusic, getMyPlaylists, playUri, queueUri } from '../../lib/music';
 import { useSpotifyLogin, logoutSpotify } from '../../lib/spotify';
+import { useThemeColors } from '../../lib/theme';
 
 export default function Search() {
+  const theme = useThemeColors();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SpotifySearchResults | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,19 +87,19 @@ export default function Search() {
     <SafeAreaView className="flex-1 bg-offWhite">
       <View className="px-6 pt-3 pb-2">
         <Text className="text-ink text-xl font-bold mb-3">Search</Text>
-        <View className="flex-row items-center bg-white rounded-full px-4 border border-black/5">
-          <Ionicons name="search" size={18} color={COLORS.muted} />
+        <View className="flex-row items-center bg-surface rounded-full px-4 border border-line/5">
+          <Ionicons name="search" size={18} color={theme.muted} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Songs, artists, playlists…"
-            placeholderTextColor={COLORS.muted}
+            placeholderTextColor={theme.muted}
             autoCorrect={false}
             className="flex-1 py-3 px-2 text-ink"
           />
           {query.length > 0 && (
             <Pressable onPress={() => setQuery('')} className="p-1">
-              <Ionicons name="close-circle" size={18} color={COLORS.muted} />
+              <Ionicons name="close-circle" size={18} color={theme.muted} />
             </Pressable>
           )}
         </View>
@@ -107,7 +108,7 @@ export default function Search() {
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 8 }} keyboardShouldPersistTaps="handled">
         {showingSearch ? (
           <>
-            {busy && <ActivityIndicator color={COLORS.gold} className="my-4" />}
+            {busy && <ActivityIndicator color={theme.gold} className="my-4" />}
             {results && results.tracks.length > 0 && (
               <Section title="Songs">
                 {results.tracks.map((t) => (
@@ -129,7 +130,7 @@ export default function Search() {
         ) : (
           <Section title="Your Playlists">
             {playlistsError ? (
-              <View className="bg-white rounded-xl p-4 border border-black/5">
+              <View className="bg-surface rounded-xl p-4 border border-line/5">
                 <Text className="text-ink/60 text-sm mb-1">Couldn't load your playlists.</Text>
                 <Text className="text-ink/40 text-xs mb-3">
                   Grant playlist access by reconnecting Spotify (search &amp; play still work
@@ -139,11 +140,11 @@ export default function Search() {
                   onPress={reconnect}
                   className="self-start bg-gold rounded-full px-4 py-2 active:opacity-80"
                 >
-                  <Text className="text-ink font-semibold text-sm">Reconnect Spotify</Text>
+                  <Text className="text-accentInk font-semibold text-sm">Reconnect Spotify</Text>
                 </Pressable>
               </View>
             ) : playlists.length === 0 ? (
-              <ActivityIndicator color={COLORS.gold} className="my-4" />
+              <ActivityIndicator color={theme.gold} className="my-4" />
             ) : (
               playlists.map((p) => <ContextRow key={p.id} item={p} onPlay={play} />)
             )}
@@ -153,7 +154,7 @@ export default function Search() {
 
       {toast && (
         <View className="absolute bottom-6 self-center bg-ink/90 rounded-full px-5 py-2.5 max-w-[90%]">
-          <Text className="text-white text-sm text-center" numberOfLines={2}>
+          <Text className="text-offWhite text-sm text-center" numberOfLines={2}>
             {toast}
           </Text>
         </View>
@@ -172,12 +173,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Thumb({ url, icon }: { url: string | null; icon: keyof typeof Ionicons.glyphMap }) {
+  const theme = useThemeColors();
   return (
     <View className="w-12 h-12 rounded-lg overflow-hidden bg-ink/10 items-center justify-center">
       {url ? (
         <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
       ) : (
-        <Ionicons name={icon} size={22} color={COLORS.muted} />
+        <Ionicons name={icon} size={22} color={theme.muted} />
       )}
     </View>
   );
@@ -192,6 +194,7 @@ function TrackRow({
   onPlay: (uri: string, label: string) => void;
   onQueue: (uri: string, label: string) => void;
 }) {
+  const theme = useThemeColors();
   return (
     <View className="flex-row items-center py-2">
       <Pressable
@@ -213,7 +216,7 @@ function TrackRow({
         className="p-2 active:opacity-50"
         hitSlop={8}
       >
-        <Ionicons name="add-circle-outline" size={24} color={COLORS.goldDark} />
+        <Ionicons name="add-circle-outline" size={24} color={theme.goldDark} />
       </Pressable>
     </View>
   );
@@ -226,6 +229,7 @@ function ContextRow({
   item: SpotifyPlaylist;
   onPlay: (uri: string, label: string) => void;
 }) {
+  const theme = useThemeColors();
   return (
     <Pressable
       onPress={() => onPlay(item.uri, item.name)}
@@ -240,7 +244,7 @@ function ContextRow({
           {item.subtitle}
         </Text>
       </View>
-      <Ionicons name="play-circle" size={26} color={COLORS.gold} />
+      <Ionicons name="play-circle" size={26} color={theme.gold} />
     </Pressable>
   );
 }

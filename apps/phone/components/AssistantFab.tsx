@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
-import { COLORS, DEFAULT_SUGGESTIONS, type AnthropicMessage } from '@casacontrol/shared';
+import { DEFAULT_SUGGESTIONS, type AnthropicMessage } from '@casacontrol/shared';
 import { runAssistantChat, getSuggestions } from '../lib/assistant';
 import { useVoiceInput } from '../lib/useVoiceInput';
+import { useThemeColors, useThemeVars } from '../lib/theme';
 import { RichText } from './RichText';
 
 interface Turn {
@@ -38,6 +39,8 @@ export function AssistantFab() {
   const [history, setHistory] = useState<AnthropicMessage[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [lang, setLang] = useState<string>('en-US');
+  const theme = useThemeColors();
+  const themeVars = useThemeVars();
   const scrollRef = useRef<ScrollView>(null);
 
   // Restore the last-used voice language.
@@ -113,33 +116,34 @@ export function AssistantFab() {
         className="absolute bottom-6 right-6 w-16 h-16 rounded-full bg-gold items-center justify-center shadow-lg active:opacity-80"
         style={{ elevation: 6 }}
       >
-        <Ionicons name="sparkles" size={28} color={COLORS.ink} />
+        <Ionicons name="sparkles" size={28} color={theme.accentInk} />
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           className="flex-1 justify-end"
+          style={themeVars}
         >
           <Pressable className="flex-1" onPress={() => setOpen(false)} />
-          <View className="bg-white rounded-t-3xl p-6 pb-10" style={{ maxHeight: '80%' }}>
+          <View className="bg-surface rounded-t-3xl p-6 pb-10" style={{ maxHeight: '80%' }}>
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-ink text-xl font-bold">Ask CasaControl</Text>
               <View className="flex-row items-center gap-1">
                 <Pressable
                   onPress={cycleLang}
-                  className="px-2.5 py-1 mr-1 rounded-full bg-offWhite border border-black/5 active:opacity-60"
+                  className="px-2.5 py-1 mr-1 rounded-full bg-offWhite border border-line/5 active:opacity-60"
                 >
                   <Text className="text-ink/60 text-xs font-semibold">{langLabel}</Text>
                 </Pressable>
                 {turns.length > 0 && (
                   <Pressable onPress={newChat} className="p-1 flex-row items-center active:opacity-60">
-                    <Ionicons name="add-circle-outline" size={20} color={COLORS.muted} />
+                    <Ionicons name="add-circle-outline" size={20} color={theme.muted} />
                     <Text className="text-ink/50 text-xs ml-1">New</Text>
                   </Pressable>
                 )}
                 <Pressable onPress={() => setOpen(false)} className="p-1 ml-2">
-                  <Ionicons name="close" size={24} color={COLORS.muted} />
+                  <Ionicons name="close" size={24} color={theme.muted} />
                 </Pressable>
               </View>
             </View>
@@ -158,19 +162,19 @@ export function AssistantFab() {
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
                       t.role === 'user'
                         ? 'self-end bg-gold rounded-br-sm'
-                        : 'self-start bg-offWhite border border-black/5 rounded-bl-sm'
+                        : 'self-start bg-offWhite border border-line/5 rounded-bl-sm'
                     }`}
                   >
                     {t.role === 'user' ? (
-                      <Text className="text-ink leading-5">{t.text}</Text>
+                      <Text className="text-accentInk leading-5">{t.text}</Text>
                     ) : (
-                      <RichText text={t.text} color={COLORS.ink} />
+                      <RichText text={t.text} color={theme.ink} />
                     )}
                   </View>
                 ))}
                 {busy && (
-                  <View className="self-start bg-offWhite border border-black/5 rounded-2xl rounded-bl-sm px-4 py-3">
-                    <ActivityIndicator color={COLORS.gold} size="small" />
+                  <View className="self-start bg-offWhite border border-line/5 rounded-2xl rounded-bl-sm px-4 py-3">
+                    <ActivityIndicator color={theme.gold} size="small" />
                   </View>
                 )}
               </ScrollView>
@@ -180,7 +184,7 @@ export function AssistantFab() {
                   <Pressable
                     key={s}
                     onPress={() => submit(s)}
-                    className="bg-offWhite border border-black/5 rounded-full px-3 py-1.5 active:opacity-70"
+                    className="bg-offWhite border border-line/5 rounded-full px-3 py-1.5 active:opacity-70"
                   >
                     <Text className="text-ink/60 text-xs">{s}</Text>
                   </Pressable>
@@ -193,20 +197,20 @@ export function AssistantFab() {
                 value={text}
                 onChangeText={setText}
                 placeholder={recognizing ? 'Listening…' : 'Ask, command, or tap the mic…'}
-                placeholderTextColor={COLORS.muted}
+                placeholderTextColor={theme.muted}
                 onSubmitEditing={() => submit()}
                 returnKeyType="send"
                 editable={!busy && !recognizing}
-                className="flex-1 bg-offWhite rounded-full px-4 py-3 text-ink border border-black/5"
+                className="flex-1 bg-offWhite rounded-full px-4 py-3 text-ink border border-line/5"
               />
               <Pressable
                 onPress={() => toggleVoice(lang)}
                 disabled={busy}
                 className={`w-12 h-12 rounded-full items-center justify-center active:opacity-80 disabled:opacity-40 ${
-                  recognizing ? 'bg-red-500' : 'bg-offWhite border border-black/5'
+                  recognizing ? 'bg-red-500' : 'bg-offWhite border border-line/5'
                 }`}
               >
-                <Ionicons name="mic" size={22} color={recognizing ? '#FFFFFF' : COLORS.ink} />
+                <Ionicons name="mic" size={22} color={recognizing ? '#FFFFFF' : theme.ink} />
               </Pressable>
               <Pressable
                 onPress={() => submit()}
@@ -214,9 +218,9 @@ export function AssistantFab() {
                 className="w-12 h-12 rounded-full bg-gold items-center justify-center active:opacity-80 disabled:opacity-40"
               >
                 {busy ? (
-                  <ActivityIndicator color={COLORS.ink} />
+                  <ActivityIndicator color={theme.accentInk} />
                 ) : (
-                  <Ionicons name="arrow-up" size={22} color={COLORS.ink} />
+                  <Ionicons name="arrow-up" size={22} color={theme.accentInk} />
                 )}
               </Pressable>
             </View>

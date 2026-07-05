@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, HUB_SERVER_PORT } from '@casacontrol/shared';
+import { HUB_SERVER_PORT } from '@casacontrol/shared';
 import { connectionStore, useConnection } from '../../lib/connection';
 import { getApiKey, setApiKey } from '../../lib/assistant';
+import { useThemeColors, useThemeMode, setThemeMode, type ThemeMode } from '../../lib/theme';
 
 export default function Settings() {
+  const theme = useThemeColors();
+  const themeMode = useThemeMode();
   const mode = useConnection((s) => s.mode);
   const localIp = useConnection((s) => s.localIp);
   const tailscaleIp = useConnection((s) => s.tailscaleIp);
@@ -34,10 +37,10 @@ export default function Settings() {
   const activeIp = mode === 'remote' ? tailscaleIp : localIp;
 
   const statusColor = connecting
-    ? COLORS.gold
+    ? theme.gold
     : reachable
-      ? COLORS.online
-      : COLORS.danger;
+      ? theme.online
+      : theme.danger;
   const statusLabel = connecting
     ? 'Connecting…'
     : reachable
@@ -50,9 +53,9 @@ export default function Settings() {
         <Text className="text-ink text-3xl font-bold mb-6">Settings</Text>
 
         {/* Connection status */}
-        <View className="bg-white rounded-2xl p-4 mb-6 border border-black/5 flex-row items-center">
+        <View className="bg-surface rounded-2xl p-4 mb-6 border border-line/5 flex-row items-center">
           {connecting ? (
-            <ActivityIndicator size="small" color={COLORS.gold} style={{ marginRight: 12 }} />
+            <ActivityIndicator size="small" color={theme.gold} style={{ marginRight: 12 }} />
           ) : (
             <View
               className="w-3 h-3 rounded-full mr-3"
@@ -74,13 +77,13 @@ export default function Settings() {
             disabled={connecting}
             className="p-2 active:opacity-60"
           >
-            <Ionicons name="refresh" size={20} color={COLORS.goldDark} />
+            <Ionicons name="refresh" size={20} color={theme.goldDark} />
           </Pressable>
         </View>
 
         {/* Mode toggle */}
         <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2">Mode</Text>
-        <View className="flex-row bg-white rounded-2xl p-1 mb-6 border border-black/5">
+        <View className="flex-row bg-surface rounded-2xl p-1 mb-6 border border-line/5">
           <ModeButton
             active={mode === 'home'}
             label="Home"
@@ -99,7 +102,7 @@ export default function Settings() {
 
         {/* Hub addresses */}
         <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2">Hub addresses</Text>
-        <View className="bg-white rounded-2xl p-4 border border-black/5">
+        <View className="bg-surface rounded-2xl p-4 border border-line/5">
           <Field
             label="Local WiFi IP"
             placeholder="192.168.1.50"
@@ -123,14 +126,22 @@ export default function Settings() {
           onPress={save}
           className="bg-gold rounded-full py-3 mt-6 items-center active:opacity-80"
         >
-          <Text className="text-ink font-semibold">Save & reconnect</Text>
+          <Text className="text-accentInk font-semibold">Save & reconnect</Text>
         </Pressable>
+
+        {/* Appearance */}
+        <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2 mt-8">Appearance</Text>
+        <View className="flex-row bg-surface rounded-2xl p-1 border border-line/5">
+          <AppearanceButton current={themeMode} value="system" label="System" icon="phone-portrait" />
+          <AppearanceButton current={themeMode} value="light" label="Light" icon="sunny" />
+          <AppearanceButton current={themeMode} value="dark" label="Dark" icon="moon" />
+        </View>
 
         {/* Claude assistant key */}
         <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2 mt-8">
           Assistant
         </Text>
-        <View className="bg-white rounded-2xl p-4 border border-black/5">
+        <View className="bg-surface rounded-2xl p-4 border border-line/5">
           <Field
             label="Anthropic API key (stored in SecureStore)"
             placeholder="sk-ant-…"
@@ -165,16 +176,43 @@ function ModeButton({
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
 }) {
+  const theme = useThemeColors();
   return (
     <Pressable
       onPress={onPress}
       className={`flex-1 rounded-xl py-3 items-center ${active ? 'bg-gold' : ''}`}
     >
-      <Ionicons name={icon} size={20} color={active ? COLORS.ink : COLORS.muted} />
-      <Text className={`font-semibold mt-1 ${active ? 'text-ink' : 'text-ink/50'}`}>
+      <Ionicons name={icon} size={20} color={active ? theme.accentInk : theme.muted} />
+      <Text className={`font-semibold mt-1 ${active ? 'text-accentInk' : 'text-ink/50'}`}>
         {label}
       </Text>
-      <Text className={active ? 'text-ink/60 text-xs' : 'text-ink/30 text-xs'}>{sub}</Text>
+      <Text className={active ? 'text-accentInk/70 text-xs' : 'text-ink/30 text-xs'}>{sub}</Text>
+    </Pressable>
+  );
+}
+
+function AppearanceButton({
+  current,
+  value,
+  label,
+  icon,
+}: {
+  current: ThemeMode;
+  value: ThemeMode;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}) {
+  const theme = useThemeColors();
+  const active = current === value;
+  return (
+    <Pressable
+      onPress={() => setThemeMode(value)}
+      className={`flex-1 rounded-xl py-3 items-center ${active ? 'bg-gold' : ''}`}
+    >
+      <Ionicons name={icon} size={18} color={active ? theme.accentInk : theme.muted} />
+      <Text className={`font-semibold text-xs mt-1 ${active ? 'text-accentInk' : 'text-ink/50'}`}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -193,6 +231,7 @@ function Field({
   numeric?: boolean;
   secure?: boolean;
 }) {
+  const theme = useThemeColors();
   return (
     <View>
       <Text className="text-ink/50 text-xs mb-1">{label}</Text>
@@ -202,8 +241,8 @@ function Field({
         autoCorrect={false}
         secureTextEntry={secure}
         keyboardType={numeric ? 'numbers-and-punctuation' : 'default'}
-        placeholderTextColor={COLORS.muted}
-        className="bg-offWhite rounded-lg px-3 py-2.5 text-ink border border-black/5"
+        placeholderTextColor={theme.muted}
+        className="bg-offWhite rounded-lg px-3 py-2.5 text-ink border border-line/5"
       />
     </View>
   );

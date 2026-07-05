@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, type Device, type PrinterStatus } from '@casacontrol/shared';
 import { fetchPrinterStatus, pickAndPrint } from '../lib/controls';
+import { useThemeColors } from '../lib/theme';
 
 const STATE_COLOR: Record<PrinterStatus['state'], string> = {
   ready: COLORS.online,
@@ -15,6 +16,7 @@ const STATE_COLOR: Record<PrinterStatus['state'], string> = {
 
 /** `printer` is the discovered printer device (needed for direct IPP printing). */
 export function PrinterCard({ printer }: { printer: Device | null }) {
+  const theme = useThemeColors();
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [printing, setPrinting] = useState(false);
 
@@ -51,10 +53,13 @@ export function PrinterCard({ printer }: { printer: Device | null }) {
   const supplies = Object.entries(status?.supplies ?? {});
 
   return (
-    <View className="bg-white rounded-2xl p-4 mb-3 border border-black/5">
+    <View className="bg-surface rounded-2xl p-4 mb-3 border border-line/5">
       <View className="flex-row items-center">
-        <View className="w-11 h-11 rounded-xl bg-ink items-center justify-center">
-          <Ionicons name="print" size={22} color={COLORS.gold} />
+        <View
+          className="w-11 h-11 rounded-xl items-center justify-center"
+          style={{ backgroundColor: '#14140F' }}
+        >
+          <Ionicons name="print" size={22} color={theme.gold} />
         </View>
         <View className="flex-1 ml-3">
           <Text className="text-ink font-bold text-base" numberOfLines={1}>
@@ -76,11 +81,11 @@ export function PrinterCard({ printer }: { printer: Device | null }) {
           className="bg-gold px-4 py-2 rounded-full active:opacity-80 disabled:opacity-40 flex-row items-center"
         >
           {printing ? (
-            <ActivityIndicator size="small" color={COLORS.ink} />
+            <ActivityIndicator size="small" color={theme.accentInk} />
           ) : (
-            <Ionicons name="document" size={16} color={COLORS.ink} />
+            <Ionicons name="document" size={16} color={theme.accentInk} />
           )}
-          <Text className="text-ink font-semibold ml-1.5 text-sm">Print File</Text>
+          <Text className="text-accentInk font-semibold ml-1.5 text-sm">Print File</Text>
         </Pressable>
       </View>
 

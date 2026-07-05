@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { COLORS, type Ps5Status } from '@casacontrol/shared';
 import { fetchPs5Status, wakePs5 } from '../lib/controls';
+import { useThemeColors } from '../lib/theme';
 
 const POWER_LABEL: Record<Ps5Status['power'], string> = {
   on: 'On',
@@ -20,6 +21,7 @@ const POWER_COLOR: Record<Ps5Status['power'], string> = {
 };
 
 export function Ps5Card() {
+  const theme = useThemeColors();
   const [status, setStatus] = useState<Ps5Status | null>(null);
   const [waking, setWaking] = useState(false);
 
@@ -53,10 +55,13 @@ export function Ps5Card() {
   const power = status?.power ?? 'unknown';
 
   return (
-    <View className="bg-white rounded-2xl p-4 mb-3 border border-black/5">
+    <View className="bg-surface rounded-2xl p-4 mb-3 border border-line/5">
       <View className="flex-row items-center">
-        <View className="w-11 h-11 rounded-xl bg-ink items-center justify-center">
-          <Ionicons name="game-controller" size={24} color={COLORS.gold} />
+        <View
+          className="w-11 h-11 rounded-xl items-center justify-center"
+          style={{ backgroundColor: '#14140F' }}
+        >
+          <Ionicons name="game-controller" size={24} color={theme.gold} />
         </View>
         <View className="flex-1 ml-3">
           <Text className="text-ink font-bold text-base">PlayStation 5</Text>
@@ -74,11 +79,11 @@ export function Ps5Card() {
           className="bg-gold px-4 py-2 rounded-full active:opacity-80 disabled:opacity-40 flex-row items-center"
         >
           {waking ? (
-            <ActivityIndicator size="small" color={COLORS.ink} />
+            <ActivityIndicator size="small" color={theme.accentInk} />
           ) : (
-            <Ionicons name="power" size={16} color={COLORS.ink} />
+            <Ionicons name="power" size={16} color={theme.accentInk} />
           )}
-          <Text className="text-ink font-semibold ml-1.5 text-sm">Wake</Text>
+          <Text className="text-accentInk font-semibold ml-1.5 text-sm">Wake</Text>
         </Pressable>
       </View>
       {status?.currentGame ? (

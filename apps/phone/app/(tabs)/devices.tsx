@@ -3,9 +3,10 @@ import { View, Text, SectionList, RefreshControl, Pressable } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { COLORS, type Device, type DeviceCategory } from '@casacontrol/shared';
+import { type Device, type DeviceCategory } from '@casacontrol/shared';
 import { devicesStore, useDevices } from '../../lib/devices';
 import { useConnection } from '../../lib/connection';
+import { useThemeColors } from '../../lib/theme';
 import { Ps5Card } from '../../components/Ps5Card';
 import { PrinterCard } from '../../components/PrinterCard';
 
@@ -36,6 +37,7 @@ export default function Devices() {
   const loading = useDevices((s) => s.loading);
   const error = useDevices((s) => s.error);
   const reachable = useConnection((s) => s.reachable);
+  const theme = useThemeColors();
 
   useFocusEffect(
     useCallback(() => {
@@ -68,7 +70,7 @@ export default function Devices() {
         <View className="flex-row items-center">
           <View
             className="w-2.5 h-2.5 rounded-full mr-2"
-            style={{ backgroundColor: reachable ? COLORS.online : COLORS.danger }}
+            style={{ backgroundColor: reachable ? theme.online : theme.danger }}
           />
           <Text className="text-ink/50 text-xs">
             {reachable ? 'Hub online' : 'Hub unreachable'}
@@ -78,7 +80,7 @@ export default function Devices() {
 
       {!reachable && !loading && devices.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="cloud-offline" size={48} color={COLORS.muted} />
+          <Ionicons name="cloud-offline" size={48} color={theme.muted} />
           <Text className="text-ink/50 mt-3 text-center">
             Can't reach the hub. Check the tablet is running and the IP in Settings.
           </Text>
@@ -94,7 +96,7 @@ export default function Devices() {
             <RefreshControl
               refreshing={loading}
               onRefresh={() => devicesStore.getState().refresh()}
-              tintColor={COLORS.gold}
+              tintColor={theme.gold}
             />
           }
           renderSectionHeader={({ section }) => (
@@ -102,7 +104,7 @@ export default function Devices() {
               <Ionicons
                 name={CATEGORY_META[section.category as DeviceCategory].icon}
                 size={16}
-                color={COLORS.goldDark}
+                color={theme.goldDark}
               />
               <Text className="text-ink/60 text-xs uppercase tracking-wider ml-2">
                 {section.title}
@@ -122,12 +124,13 @@ export default function Devices() {
 }
 
 function DeviceRow({ device }: { device: Device }) {
+  const theme = useThemeColors();
   return (
-    <Pressable className="flex-row items-center bg-white rounded-xl px-4 py-3 mb-2 border border-black/5 active:opacity-70">
+    <Pressable className="flex-row items-center bg-surface rounded-xl px-4 py-3 mb-2 border border-line/5 active:opacity-70">
       <Ionicons
         name={KIND_ICON[device.kind] ?? 'hardware-chip'}
         size={22}
-        color={COLORS.goldDark}
+        color={theme.goldDark}
       />
       <View className="flex-1 ml-3">
         <Text className="text-ink font-semibold" numberOfLines={1}>
@@ -140,7 +143,7 @@ function DeviceRow({ device }: { device: Device }) {
       </View>
       <View
         className="w-2.5 h-2.5 rounded-full"
-        style={{ backgroundColor: device.online ? COLORS.online : COLORS.offline }}
+        style={{ backgroundColor: device.online ? theme.online : theme.offline }}
       />
     </Pressable>
   );

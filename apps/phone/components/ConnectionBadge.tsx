@@ -1,14 +1,15 @@
 import { useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { COLORS } from '@casacontrol/shared';
 import { connectionStore, useConnection } from '../lib/connection';
+import { useThemeColors } from '../lib/theme';
 
 /** Small "Local / Remote" badge + latency ping, shown on the home screen. */
 export function ConnectionBadge() {
   const mode = useConnection((s) => s.mode);
   const reachable = useConnection((s) => s.reachable);
   const latencyMs = useConnection((s) => s.latencyMs);
+  const theme = useThemeColors();
 
   useFocusEffect(
     useCallback(() => {
@@ -19,10 +20,10 @@ export function ConnectionBadge() {
   );
 
   return (
-    <View className="flex-row items-center bg-white rounded-full px-3 py-1.5 border border-black/5">
+    <View className="flex-row items-center bg-surface rounded-full px-3 py-1.5 border border-line/5">
       <View
         className="w-2 h-2 rounded-full mr-2"
-        style={{ backgroundColor: reachable ? COLORS.online : COLORS.danger }}
+        style={{ backgroundColor: reachable ? theme.online : theme.danger }}
       />
       <Text className="text-ink text-xs font-semibold">
         {mode === 'remote' ? 'Remote' : 'Local'}

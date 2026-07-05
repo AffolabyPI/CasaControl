@@ -1,17 +1,19 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '@casacontrol/shared';
+import { useThemeColors, useIsDark } from '../../lib/theme';
 
 export default function TabsLayout() {
+  const theme = useThemeColors();
+  const isDark = useIsDark();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.goldDark,
-        tabBarInactiveTintColor: COLORS.muted,
+        tabBarActiveTintColor: isDark ? theme.gold : theme.goldDark,
+        tabBarInactiveTintColor: theme.muted,
         tabBarStyle: {
-          backgroundColor: COLORS.white,
-          borderTopColor: '#EAE7DE',
+          backgroundColor: theme.white,
+          borderTopColor: isDark ? '#2C2A23' : '#EAE7DE',
         },
       }}
     >
