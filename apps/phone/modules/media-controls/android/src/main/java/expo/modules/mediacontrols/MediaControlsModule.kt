@@ -47,6 +47,7 @@ class MediaControlsModule : Module() {
   private var receiver: BroadcastReceiver? = null
   private var lastArtUrl: String? = null
   private var lastArt: Bitmap? = null
+  private var fgsStarted = false
   private val main = Handler(Looper.getMainLooper())
   private val io = Executors.newSingleThreadExecutor()
 
@@ -200,10 +201,32 @@ class MediaControlsModule : Module() {
           .setShowActionsInCompactView(0, 1, 2),
       )
 
+    show(builder.build())
+  }
+
+  /**
+   * Post/update the media notification. The first post starts a foreground
+   * service (so the process stays warm and taps work when backgrounded);
+   * subsequent posts just update the notification. If starting the FGS isn't
+   * allowed (app in the background on Android 12+), degrade to a plain
+   * notification rather than crashing.
+   */
+  private fun show(notification: android.app.Notification) {
+    if (!fgsStarted) {
+      try {
+        val intent = Intent(context, MediaControlsService::class.java)
+          .putExtra(MediaControlsService.EXTRA_NOTIFICATION, notification)
+        ContextCompat.startForegroundService(context, intent)
+        fgsStarted = true
+        return
+      } catch (_: Exception) {
+        // Background FGS start not permitted — fall through to a plain notify.
+      }
+    }
     val nm = NotificationManagerCompat.from(context)
     if (nm.areNotificationsEnabled()) {
       try {
-        nm.notify(NOTIF_ID, builder.build())
+        nm.notify(NOTIF_ID, notification)
       } catch (_: SecurityException) {
         // POST_NOTIFICATIONS not granted yet — the JS layer requests it.
       }
@@ -243,6 +266,11 @@ class MediaControlsModule : Module() {
   }
 
   private fun clearNotification() {
+    if (fgsStarted) {
+      // Stopping the service removes its foreground notification too.
+      context.stopService(Intent(context, MediaControlsService::class.java))
+      fgsStarted = false
+    }
     NotificationManagerCompat.from(context).cancel(NOTIF_ID)
     session?.let {
       it.isActive = false
