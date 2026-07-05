@@ -4,12 +4,15 @@
  * subsystem. Phase 4 extends the PS5/printer branches.
  */
 import * as Network from 'expo-network';
+import Constants from 'expo-constants';
 import { HUB_SERVER_PORT, createLogger, type CasaAction } from '@casacontrol/shared';
 import { HubServer } from './server/hubServer';
 import { deviceStore } from './discovery/store';
 import { store as spotify } from './spotify';
 import { ps5Status, ps5Wake, printerStatus } from './devices/controllers';
 import { startHubForegroundService, stopHubForegroundService } from './foregroundService';
+import { hubModeStore } from './hubMode';
+import { isSpotifyConnected } from '../modules/spotify-remote';
 import { getSystemVolumePercent, setSystemVolumePercent } from './systemVolume';
 import { discoverSpeaker, wakeUeBoom, sleepUeBoom, wakeSpeaker } from './bleSpeaker';
 import {
@@ -80,6 +83,12 @@ export function startHub(): void {
   deviceStore.getState().start();
   if (server) return;
   server = new HubServer({
+    getHealth: async () => ({
+      version: (Constants.expoConfig?.version as string | undefined) ?? '0.0.0',
+      hubMode: hubModeStore.getState().mode,
+      deviceCount: deviceStore.getState().devices.length,
+      spotifyConnected: isSpotifyConnected(),
+    }),
     getDevices: async () => deviceStore.getState().devices,
     getPlayback: async () => spotify.getState().playback,
     getPs5Status: ps5Status,

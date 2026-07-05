@@ -24,6 +24,21 @@ import { HUB_SERVER_PORT } from '../constants';
 export interface HubHealth {
   ok: boolean;
   uptimeMs: number;
+  /** App version reported by the hub. */
+  version?: string;
+  /** Whether the tablet is in dashboard (screen-on) or private (screen-off) mode. */
+  hubMode?: 'dashboard' | 'private';
+  /** Number of devices currently discovered on the LAN. */
+  deviceCount?: number;
+  /** Whether the tablet's Spotify App Remote is connected (locked cold-start ready). */
+  spotifyConnected?: boolean;
+}
+
+/** Result of probing a single hub endpoint (used for reachability/failover). */
+export interface HubProbe {
+  ok: boolean;
+  latencyMs: number;
+  health?: HubHealth;
 }
 
 export class HubClient {
@@ -39,6 +54,27 @@ export class HubClient {
   /** Build `http://host:port` from a bare IP, or pass a full URL through. */
   static fromIp(ip: string, port: number = HUB_SERVER_PORT): string {
     return ip.startsWith('http') ? ip : `http://${ip}:${port}`;
+  }
+
+  /**
+   * Probe a specific hub URL without touching any client instance — used by the
+   * connection monitor to check reachability + failover to the other endpoint.
+   */
+  static async probe(baseUrl: string, timeoutMs = 3_000): Promise<HubProbe> {
+    if (!baseUrl) return { ok: false, latencyMs: 0 };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const start = Date.now();
+    try {
+      const res = await fetch(`${baseUrl}/health`, { signal: controller.signal });
+      if (!res.ok) return { ok: false, latencyMs: Date.now() - start };
+      const health = (await res.json()) as HubHealth;
+      return { ok: true, latencyMs: Date.now() - start, health };
+    } catch {
+      return { ok: false, latencyMs: Date.now() - start };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async fetchJson<T>(path: string, init?: RequestInit): Promise<T> {

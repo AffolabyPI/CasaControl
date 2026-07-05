@@ -12,6 +12,7 @@ import { createLogger, type CasaAction } from '@casacontrol/shared';
 const log = createLogger('hub-server');
 
 export interface HubHandlers {
+  getHealth: () => Promise<Record<string, unknown>>;
   getDevices: () => Promise<unknown>;
   getPlayback: () => Promise<unknown>;
   getPs5Status: () => Promise<unknown>;
@@ -148,7 +149,8 @@ export class HubServer {
     const { pathname: path, query } = splitQuery(req.path);
     try {
       if (method === 'GET' && path === '/health') {
-        return httpResponse(200, { ok: true, uptimeMs: Date.now() - this.startedAt });
+        const extra = await this.handlers.getHealth().catch(() => ({}));
+        return httpResponse(200, { ok: true, uptimeMs: Date.now() - this.startedAt, ...extra });
       }
       if (method === 'GET' && path === '/devices') {
         return httpResponse(200, await this.handlers.getDevices());

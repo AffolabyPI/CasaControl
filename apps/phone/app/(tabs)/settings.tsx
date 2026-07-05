@@ -16,6 +16,9 @@ export default function Settings() {
   const latencyMs = useConnection((s) => s.latencyMs);
   const reachable = useConnection((s) => s.reachable);
   const connecting = useConnection((s) => s.connecting);
+  const activeEndpoint = useConnection((s) => s.activeEndpoint);
+  const autoFailover = useConnection((s) => s.autoFailover);
+  const health = useConnection((s) => s.health);
 
   const [localDraft, setLocalDraft] = useState(localIp);
   const [remoteDraft, setRemoteDraft] = useState(tailscaleIp);
@@ -65,12 +68,22 @@ export default function Settings() {
           <View className="flex-1">
             <Text className="text-ink font-semibold">{statusLabel}</Text>
             <Text className="text-ink/50 text-xs">
-              {mode === 'remote' ? 'Remote (Tailscale)' : 'Home (local WiFi)'}
+              {(activeEndpoint ?? mode) === 'remote' ? 'Remote (Tailscale)' : 'Home (local WiFi)'}
               {latencyMs != null ? ` · ${latencyMs} ms` : ''}
+              {reachable && activeEndpoint && activeEndpoint !== mode ? ' · failover' : ''}
             </Text>
-            <Text className="text-ink/40 text-[11px] mt-0.5">
-              → http://{activeIp || '(not set)'}:{HUB_SERVER_PORT}
-            </Text>
+            {reachable && health ? (
+              <Text className="text-ink/40 text-[11px] mt-0.5">
+                {`v${health.version ?? '?'}`}
+                {health.hubMode ? ` · ${health.hubMode}` : ''}
+                {typeof health.deviceCount === 'number' ? ` · ${health.deviceCount} devices` : ''}
+                {health.spotifyConnected ? ' · Spotify ✓' : ''}
+              </Text>
+            ) : (
+              <Text className="text-ink/40 text-[11px] mt-0.5">
+                → http://{activeIp || '(not set)'}:{HUB_SERVER_PORT}
+              </Text>
+            )}
           </View>
           <Pressable
             onPress={() => connectionStore.getState().ping()}
@@ -99,6 +112,33 @@ export default function Settings() {
             onPress={() => connectionStore.getState().setMode('remote')}
           />
         </View>
+
+        {/* Auto-failover */}
+        <Pressable
+          onPress={() => connectionStore.getState().setAutoFailover(!autoFailover)}
+          className="flex-row items-center bg-surface rounded-2xl p-4 mb-6 border border-line/5 active:opacity-70"
+        >
+          <Ionicons
+            name={autoFailover ? 'swap-horizontal' : 'swap-horizontal-outline'}
+            size={20}
+            color={autoFailover ? theme.online : theme.muted}
+          />
+          <View className="flex-1 ml-3">
+            <Text className="text-ink font-semibold">Auto-failover</Text>
+            <Text className="text-ink/50 text-xs">
+              Use the other endpoint automatically when the preferred one is down
+            </Text>
+          </View>
+          <View
+            className="w-11 h-6 rounded-full p-0.5"
+            style={{ backgroundColor: autoFailover ? theme.online : theme.muted }}
+          >
+            <View
+              className="w-5 h-5 rounded-full bg-white"
+              style={{ marginLeft: autoFailover ? 20 : 0 }}
+            />
+          </View>
+        </Pressable>
 
         {/* Hub addresses */}
         <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2">Hub addresses</Text>
