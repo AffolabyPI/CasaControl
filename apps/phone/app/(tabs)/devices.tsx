@@ -1,14 +1,25 @@
-import { useCallback, useEffect } from 'react';
-import { View, Text, SectionList, RefreshControl, Pressable, Alert } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  SectionList,
+  RefreshControl,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { type Device, type DeviceAction, type DeviceCategory } from '@casacontrol/shared';
+import { useRouter } from 'expo-router';
 import { devicesStore, useDevices } from '../../lib/devices';
 import { useConnection, hubClient } from '../../lib/connection';
+import { profilesStore, useProfiles } from '../../lib/profiles';
 import { useThemeColors } from '../../lib/theme';
 import { Ps5Card } from '../../components/Ps5Card';
 import { PrinterCard } from '../../components/PrinterCard';
+import { ProfileReviewModal } from '../../components/ProfileReviewModal';
 
 const CATEGORY_META: Record<
   DeviceCategory,
@@ -39,9 +50,13 @@ export default function Devices() {
   const reachable = useConnection((s) => s.reachable);
   const theme = useThemeColors();
 
+  const router = useRouter();
+  const profileError = useProfiles((s) => s.error);
+
   useFocusEffect(
     useCallback(() => {
       void devicesStore.getState().refresh();
+      void profilesStore.getState().refresh();
       const t = setInterval(() => void devicesStore.getState().refresh(), 15_000);
       return () => clearInterval(t);
     }, []),
@@ -60,6 +75,15 @@ export default function Devices() {
       <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2">Controls</Text>
       <Ps5Card />
       <PrinterCard printer={printerDevice} />
+      <Pressable
+        onPress={() => router.push('/profiles' as never)}
+        className="flex-row items-center bg-surface rounded-xl px-4 py-3 mt-2 border border-line/5 active:opacity-70"
+      >
+        <Ionicons name="construct" size={18} color={theme.goldDark} />
+        <Text className="text-ink font-semibold ml-3 flex-1">Manage device profiles</Text>
+        <Ionicons name="chevron-forward" size={16} color={theme.muted} />
+      </Pressable>
+      {profileError ? <Text className="text-danger text-xs mt-2">{profileError}</Text> : null}
     </View>
   );
 
@@ -119,6 +143,7 @@ export default function Devices() {
           }
         />
       )}
+      <ProfileReviewModal />
     </SafeAreaView>
   );
 }
@@ -151,14 +176,85 @@ function DeviceRow({ device }: { device: Device }) {
         />
       </View>
 
-      {device.suggestedActions && device.suggestedActions.length > 0 ? (
-        <View className="flex-row flex-wrap mt-2.5 ml-8">
-          {device.suggestedActions.map((a) => (
-            <ActionChip key={a.id} device={device} action={a} />
-          ))}
-        </View>
-      ) : null}
+      <DeviceControls device={device} />
     </View>
+  );
+}
+
+/** Profile-backed executable actions, or a "Try to add control" affordance. */
+function DeviceControls({ device }: { device: Device }) {
+  const theme = useThemeColors();
+  const matched = useProfiles((s) => s.matchFor(device));
+  const researching = useProfiles((s) => s.researchingId === device.id);
+
+  if (matched) {
+    return (
+      <View className="flex-row flex-wrap items-center mt-2.5 ml-8">
+        {matched.source === 'ai_generated' ? (
+          <View className="bg-gold/20 rounded-full px-2 py-1 mr-2 mb-1">
+            <Text className="text-goldDark text-[10px] font-bold uppercase tracking-wide">AI</Text>
+          </View>
+        ) : null}
+        {Object.keys(matched.actions).map((name) => (
+          <ProfileActionChip key={name} device={device} profileId={matched.profileId} action={name} />
+        ))}
+      </View>
+    );
+  }
+
+  // No profile yet → offer research (this is the ONLY place research is triggered).
+  return (
+    <View className="flex-row flex-wrap items-center mt-2.5 ml-8">
+      {device.suggestedActions?.map((a) => <ActionChip key={a.id} device={device} action={a} />)}
+      <Pressable
+        onPress={() => void profilesStore.getState().research(device)}
+        disabled={researching}
+        className="flex-row items-center rounded-full px-3 py-1.5 mr-2 mb-1 border border-gold/40 active:opacity-70"
+      >
+        {researching ? (
+          <ActivityIndicator size="small" color={theme.goldDark} style={{ marginRight: 5 }} />
+        ) : (
+          <Ionicons name="sparkles" size={13} color={theme.goldDark} style={{ marginRight: 5 }} />
+        )}
+        <Text className="text-goldDark text-xs font-semibold">
+          {researching ? 'Researching…' : 'Try to add control'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function ProfileActionChip({
+  device,
+  profileId,
+  action,
+}: {
+  device: Device;
+  profileId: string;
+  action: string;
+}) {
+  const theme = useThemeColors();
+  const [busy, setBusy] = useState(false);
+  const onPress = async () => {
+    setBusy(true);
+    try {
+      const r = await profilesStore.getState().runAction(profileId, action, device);
+      if (!r.ok) Alert.alert(action, r.detail);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={busy}
+      className="flex-row items-center rounded-full px-3 py-1.5 mr-2 mb-1 bg-gold active:opacity-70"
+    >
+      {busy ? (
+        <ActivityIndicator size="small" color={theme.accentInk} style={{ marginRight: 5 }} />
+      ) : null}
+      <Text className="text-accentInk text-xs font-semibold">{action.replace(/_/g, ' ')}</Text>
+    </Pressable>
   );
 }
 

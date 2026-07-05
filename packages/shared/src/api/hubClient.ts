@@ -19,6 +19,7 @@ import type {
   PrinterStatus,
   SpotifyPlaybackState,
 } from '../types';
+import type { DeviceProfile } from '../devices/profiles/schema';
 import { HUB_SERVER_PORT } from '../constants';
 
 export interface HubHealth {
@@ -145,6 +146,37 @@ export class HubClient {
     return this.fetchJson('/command', {
       method: 'POST',
       body: JSON.stringify(action),
+    });
+  }
+
+  // --- Adaptive device profiles ---
+
+  /** All cached profiles (builtin + approved ai_generated). */
+  getProfiles(): Promise<DeviceProfile[]> {
+    return this.fetchJson<DeviceProfile[]>('/profiles');
+  }
+
+  /** Persist an approved profile on the hub (validated hub-side before saving). */
+  saveProfile(profile: DeviceProfile): Promise<{ ok: boolean; error?: string }> {
+    return this.fetchJson('/profiles/save', { method: 'POST', body: JSON.stringify(profile) });
+  }
+
+  /** Run one action of a stored profile against a target device. */
+  executeProfile(
+    profileId: string,
+    actionName: string,
+    target: { targetMac?: string; targetIp?: string; bleDeviceId?: string } = {},
+  ): Promise<{ ok: boolean; result?: { ok: boolean; detail: string }; error?: string }> {
+    return this.fetchJson('/profiles/execute', {
+      method: 'POST',
+      body: JSON.stringify({ profileId, actionName, target }),
+    });
+  }
+
+  deleteProfile(profileId: string): Promise<{ ok: boolean; error?: string }> {
+    return this.fetchJson('/profiles/delete', {
+      method: 'POST',
+      body: JSON.stringify({ profileId }),
     });
   }
 }

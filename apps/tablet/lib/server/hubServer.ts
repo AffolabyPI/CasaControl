@@ -24,6 +24,10 @@ export interface HubHandlers {
   spotifySearch: (query: string) => Promise<unknown>;
   spotifyStart: (uri: string) => Promise<unknown>;
   spotifyRemoteConnect: () => Promise<unknown>;
+  profilesList: () => Promise<unknown>;
+  profileSave: (body: unknown) => Promise<unknown>;
+  profileExecute: (body: unknown) => Promise<unknown>;
+  profileDelete: (body: unknown) => Promise<unknown>;
   runCommand: (action: CasaAction) => Promise<unknown>;
 }
 
@@ -202,6 +206,19 @@ export class HubServer {
         }
         await this.handlers.bleWrite(id, svc, chr, val, query.resp !== '0');
         return httpResponse(200, { ok: true, wrote: { id, svc, chr, val, resp: query.resp !== '0' } });
+      }
+      // --- Adaptive device profiles ---
+      if (method === 'GET' && path === '/profiles') {
+        return httpResponse(200, await this.handlers.profilesList());
+      }
+      if (method === 'POST' && path === '/profiles/save') {
+        return httpResponse(200, await this.handlers.profileSave(JSON.parse(req.body || '{}')));
+      }
+      if (method === 'POST' && path === '/profiles/execute') {
+        return httpResponse(200, await this.handlers.profileExecute(JSON.parse(req.body || '{}')));
+      }
+      if (method === 'POST' && path === '/profiles/delete') {
+        return httpResponse(200, await this.handlers.profileDelete(JSON.parse(req.body || '{}')));
       }
       if (method === 'POST' && path === '/command') {
         const action = JSON.parse(req.body || '{}') as CasaAction;

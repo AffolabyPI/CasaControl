@@ -13,6 +13,13 @@ import { ps5Status, ps5Wake, printerStatus } from './devices/controllers';
 import { startHubForegroundService, stopHubForegroundService } from './foregroundService';
 import { hubModeStore } from './hubMode';
 import { isSpotifyConnected } from '../modules/spotify-remote';
+import {
+  listProfiles,
+  saveProfile,
+  executeProfile,
+  deleteProfile,
+} from './devices/deviceProfiles';
+import type { DeviceProfile } from '@casacontrol/shared';
 import { getSystemVolumePercent, setSystemVolumePercent } from './systemVolume';
 import { discoverSpeaker, wakeUeBoom, sleepUeBoom, wakeSpeaker } from './bleSpeaker';
 import {
@@ -100,6 +107,32 @@ export function startHub(): void {
     spotifySearch: searchSpotify,
     spotifyStart: playContext,
     spotifyRemoteConnect: connectRemote,
+    profilesList: listProfiles,
+    profileSave: async (body) => {
+      try {
+        await saveProfile(body as DeviceProfile); // saveProfile validates via zod
+        return { ok: true };
+      } catch (e) {
+        // Defense-in-depth: a profile that fails schema validation is rejected
+        // here too, returned as a clean error rather than a 500.
+        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
+    },
+    profileExecute: async (body) => {
+      const b = body as {
+        profileId?: string;
+        actionName?: string;
+        target?: { targetMac?: string; targetIp?: string; bleDeviceId?: string };
+      };
+      if (!b.profileId || !b.actionName) return { ok: false, error: 'need profileId + actionName' };
+      return executeProfile(b.profileId, b.actionName, b.target ?? {});
+    },
+    profileDelete: async (body) => {
+      const id = (body as { profileId?: string }).profileId;
+      if (!id) return { ok: false, error: 'need profileId' };
+      await deleteProfile(id);
+      return { ok: true };
+    },
     runCommand,
   });
   server.start(HUB_SERVER_PORT);
