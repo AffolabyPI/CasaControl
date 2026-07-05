@@ -90,16 +90,23 @@ export async function playContext(
   const devices = await spotifyClient.getDevices();
   const target = pickDevice(devices);
   if (target) {
-    await startOn(uri, target.id);
-    await delay(700);
-    await spotify.getState().refresh();
-    log.info(`started ${uri} on ${target.name}`);
-    return { ok: true, device: target.name };
+    try {
+      await startOn(uri, target.id);
+      await delay(700);
+      await spotify.getState().refresh();
+      log.info(`started ${uri} on ${target.name}`);
+      return { ok: true, device: target.name };
+    } catch (e) {
+      // The device was listed but couldn't be started (e.g. a registered-but-idle
+      // tablet the Web API can't wake over a lock screen). Fall through to App
+      // Remote, which drives the local Spotify directly.
+      log.warn(`Web API start on ${target.name} failed — falling back to App Remote: ${String(e)}`);
+    }
   }
 
-  // Nothing registered (cold, and maybe locked). Drive the tablet's local
-  // Spotify directly via App Remote — the deep-link foreground below can't run
-  // over a secure lock screen, but App Remote can once it's been authorized.
+  // No usable Web-API device (cold, or the start above failed). Drive the
+  // tablet's local Spotify directly via App Remote — the deep-link foreground
+  // below can't run over a secure lock screen, but App Remote can once authorized.
   if (!PREFERRED_DEVICE && (await tryAppRemotePlay(uri))) {
     await delay(900);
     await spotify.getState().refresh();
