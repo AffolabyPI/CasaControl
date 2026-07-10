@@ -2,17 +2,20 @@
  * Bridges the Spotify playback store to the native media notification.
  *
  * Mirrors the hub's now-playing track into a lock-screen / shade media
- * notification, and turns transport taps back into store actions (which the
- * store routes to the hub / Spotify). There's no local audio — this is a remote
- * control surface. It follows the store while the app process is alive; it isn't
- * backed by a foreground service, so a long-backgrounded app may stop updating
- * until reopened.
+ * notification, and turns transport taps + seekbar scrubs back into store
+ * actions. There's no local audio; this is a remote control surface. It follows
+ * the store while the app process is alive.
  */
 import { useEffect } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { createLogger } from '@casacontrol/shared';
 import { store as spotifyStore } from './spotify';
-import { setNowPlaying, clearNowPlaying, addCommandListener } from '../modules/media-controls';
+import {
+  setNowPlaying,
+  clearNowPlaying,
+  addCommandListener,
+  addSeekListener,
+} from '../modules/media-controls';
 
 const log = createLogger('media-notif');
 
@@ -33,25 +36,55 @@ export function useMediaNotification(): void {
   useEffect(() => {
     void ensureNotifPermission();
 
+    // The notification (our own buttons) and the system media UI (driven by the
+    // MediaSession) can both emit the same command for one tap — collapse
+    // duplicates fired within a short window so a single "next" skips once.
+    // After a transport command, poll a couple of times: the app pauses its
+    // regular polling when backgrounded, and Spotify lags a beat before it
+    // reports the new track — without these the notification body goes stale
+    // even though the skip worked.
+    const refreshSoon = (): void => {
+      setTimeout(() => void spotifyStore.getState().refresh(), 700);
+      setTimeout(() => void spotifyStore.getState().refresh(), 1600);
+      setTimeout(() => void spotifyStore.getState().refresh(), 3000);
+    };
+
+    let lastCmd = '';
+    let lastCmdAt = 0;
     const sub = addCommandListener((cmd) => {
+      const now = Date.now();
+      if (cmd === lastCmd && now - lastCmdAt < 600) return;
+      lastCmd = cmd;
+      lastCmdAt = now;
+
       const s = spotifyStore.getState();
       switch (cmd) {
         case 'play':
           void s.play();
+          refreshSoon();
           break;
         case 'pause':
           void s.pause();
+          refreshSoon();
           break;
         case 'next':
           void s.next();
+          refreshSoon();
           break;
         case 'previous':
           void s.previous();
+          refreshSoon();
           break;
         case 'stop':
           clearNowPlaying();
           break;
       }
+    });
+
+    // Dragging the notification seekbar scrubs the song position.
+    const seekSub = addSeekListener((positionMs) => {
+      void spotifyStore.getState().seek(positionMs);
+      refreshSoon();
     });
 
     let lastSig = '';
@@ -64,6 +97,7 @@ export function useMediaNotification(): void {
         }
         return;
       }
+
       // Skip no-op re-renders on unrelated state changes; progressMs keeps the
       // seekbar roughly fresh on each poll.
       const sig = `${pb.track.id}|${pb.isPlaying}|${pb.progressMs}`;
@@ -85,6 +119,7 @@ export function useMediaNotification(): void {
 
     return () => {
       sub.remove();
+      seekSub.remove();
       unsub();
       clearNowPlaying();
     };

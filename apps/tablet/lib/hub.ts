@@ -24,15 +24,46 @@ import { getSystemVolumePercent, setSystemVolumePercent } from './systemVolume';
 import { discoverSpeaker, wakeUeBoom, sleepUeBoom, wakeSpeaker } from './bleSpeaker';
 import {
   playContext,
+  playUris,
   queueTrack,
   searchSpotify,
   listDevices,
   connectRemote,
   resumeLocal,
 } from './spotifyControl';
+import {
+  goveePower,
+  goveeBrightness,
+  goveeColor,
+  goveeColorTemp,
+  goveeScene,
+  listGoveeDevices,
+  listGoveeScenes,
+  goveeState,
+} from './goveeControl';
+import {
+  shieldSendKey,
+  shieldLaunch,
+  shieldStatus,
+  shieldStartPairing,
+  shieldSubmitCode,
+  shieldConnect,
+} from './shieldControl';
 
 const log = createLogger('hub');
 let server: HubServer | null = null;
+
+/** Turn a raw BLE failure into a friendly, actionable speaker message. */
+function speakerError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/cancelled|timeout|disconnected|not connect/i.test(msg)) {
+    return (
+      "Couldn't reach the speaker over Bluetooth. If it's playing it may be busy - " +
+      "or if it's been off a while, tap its power button once, then try again."
+    );
+  }
+  return `Speaker error: ${msg}`;
+}
 
 export async function runCommand(action: CasaAction): Promise<unknown> {
   const s = spotify.getState();
@@ -57,6 +88,8 @@ export async function runCommand(action: CasaAction): Promise<unknown> {
       return { ok: true };
     case 'spotify.playContext':
       return playContext(action.uri);
+    case 'spotify.playUris':
+      return playUris(action.uris);
     case 'spotify.resumeLocal':
       return resumeLocal();
     case 'spotify.queue':
@@ -65,11 +98,19 @@ export async function runCommand(action: CasaAction): Promise<unknown> {
       await setSystemVolumePercent(action.volume);
       return { ok: true, volume: action.volume };
     case 'speaker.wake':
-      await wakeUeBoom();
-      return { ok: true };
+      try {
+        await wakeUeBoom();
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: speakerError(e) };
+      }
     case 'speaker.sleep':
-      await sleepUeBoom();
-      return { ok: true };
+      try {
+        await sleepUeBoom();
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: speakerError(e) };
+      }
     case 'devices.list':
       return deviceStore
         .getState()
@@ -78,6 +119,20 @@ export async function runCommand(action: CasaAction): Promise<unknown> {
       return ps5Wake();
     case 'ps5.status':
       return ps5Status();
+    case 'govee.power':
+      return goveePower(action.on, action.sku, action.device);
+    case 'govee.brightness':
+      return goveeBrightness(action.value, action.sku, action.device);
+    case 'govee.color':
+      return goveeColor(action.rgb, action.sku, action.device);
+    case 'govee.colorTemp':
+      return goveeColorTemp(action.kelvin, action.sku, action.device);
+    case 'govee.scene':
+      return goveeScene(action.sceneId, action.paramId, action.sku, action.device);
+    case 'shield.key':
+      return shieldSendKey(action.key);
+    case 'shield.launch':
+      return shieldLaunch(action.target);
     case 'printer.print':
       // Printing is initiated from the phone (it holds the picked file);
       // the hub just reports current printer status here.
@@ -136,6 +191,13 @@ export function startHub(): void {
       await deleteProfile(id);
       return { ok: true };
     },
+    goveeDevices: listGoveeDevices,
+    goveeScenes: (sku, device) => listGoveeScenes(sku || undefined, device || undefined),
+    goveeState: (sku, device) => goveeState(sku || undefined, device || undefined),
+    shieldStatus: async () => shieldStatus(),
+    shieldPairStart: shieldStartPairing,
+    shieldPairCode: shieldSubmitCode,
+    shieldConnect,
     runCommand,
   });
   server.start(HUB_SERVER_PORT);

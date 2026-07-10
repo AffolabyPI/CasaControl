@@ -1,0 +1,28 @@
+apply plugin: 'com.android.library'
+
+group = 'com.casacontrol.androidtvremote'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+useExpoPublishing()
+
+android {
+  namespace "expo.modules.androidtvremote"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // BouncyCastle: generate the self-signed client X.509 certificate the Android
+  // TV Remote v2 protocol requires. Android bundles a *repackaged* BouncyCastle
+  // under com.android.org.bouncycastle (not public), so the real org.bouncycastle
+  // artifacts don't clash and give us the cert-builder API.
+  implementation 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
+  implementation 'org.bouncycastle:bcpkix-jdk15to18:1.78.1'
+}

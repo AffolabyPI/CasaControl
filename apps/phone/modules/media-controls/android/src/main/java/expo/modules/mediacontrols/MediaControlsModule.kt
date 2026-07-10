@@ -63,7 +63,7 @@ class MediaControlsModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("MediaControls")
-    Events("onCommand")
+    Events("onCommand", "onSeek")
 
     AsyncFunction("setNowPlaying") { info: NowPlaying, promise: Promise ->
       main.post {
@@ -121,6 +121,10 @@ class MediaControlsModule : Module() {
       override fun onSkipToNext() = emit("next")
       override fun onSkipToPrevious() = emit("previous")
       override fun onStop() = emit("stop")
+      // Dragging the notification seekbar → scrub the song position.
+      override fun onSeekTo(pos: Long) {
+        sendEvent("onSeek", mapOf("positionMs" to pos.toDouble()))
+      }
     })
     s.isActive = true
     session = s
@@ -139,6 +143,16 @@ class MediaControlsModule : Module() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_IMMUTABLE
     // Distinct request codes so extras don't get collapsed across actions.
     return PendingIntent.getBroadcast(context, cmd.hashCode(), intent, flags)
+  }
+
+  /** Tapping the notification body opens the app (its launcher activity). */
+  private fun contentIntent(): PendingIntent? {
+    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+      ?.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+      ?: return null
+    var flags = PendingIntent.FLAG_UPDATE_CURRENT
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_IMMUTABLE
+    return PendingIntent.getActivity(context, 1, launch, flags)
   }
 
   private fun showOrUpdate(info: NowPlaying) {
@@ -163,6 +177,7 @@ class MediaControlsModule : Module() {
       PlaybackStateCompat.ACTION_PLAY_PAUSE or
       PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
       PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+      PlaybackStateCompat.ACTION_SEEK_TO or
       PlaybackStateCompat.ACTION_STOP
     val playState = if (info.isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
     s.setPlaybackState(
@@ -191,6 +206,7 @@ class MediaControlsModule : Module() {
       .setOnlyAlertOnce(true)
       .setOngoing(info.isPlaying)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setContentIntent(contentIntent())
       .setDeleteIntent(pending("stop"))
       .addAction(android.R.drawable.ic_media_previous, "Previous", pending("previous"))
       .addAction(playPauseIcon, playPauseLabel, pending(playPauseCmd))

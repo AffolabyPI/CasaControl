@@ -154,6 +154,50 @@ export async function resumeLocal(): Promise<{ ok: boolean; error?: string }> {
   }
 }
 
+/**
+ * Start an explicit ordered list of track URIs (used to blend a playlist with
+ * recommended songs). Cold-starts the tablet with the first track via App Remote
+ * so it registers as a Connect device, then hands the full list to the Web API.
+ */
+export async function playUris(
+  uris: string[],
+): Promise<{ ok: boolean; device?: string; error?: string }> {
+  if (!uris.length) return { ok: false, error: 'No tracks to play' };
+  const first = uris[0]!;
+
+  let devices = await spotifyClient.getDevices();
+  let target = pickDevice(devices);
+
+  if (!target && !PREFERRED_DEVICE && (await tryAppRemotePlay(first))) {
+    // App Remote woke the local Spotify — give it a moment to register, then the
+    // Web API can take over with the whole blended list.
+    await delay(1500);
+    devices = await spotifyClient.getDevices();
+    target = pickDevice(devices);
+  }
+  if (!target) {
+    ({ target } = await ensureDevice());
+  }
+  if (!target) {
+    return {
+      ok: false,
+      error: 'No Spotify device available — open Spotify on the tablet once, and authorize App Remote.',
+    };
+  }
+
+  try {
+    // Spotify's start endpoint takes up to 100 URIs.
+    await spotifyClient.startPlayback({ uris: uris.slice(0, 100), deviceId: target.id });
+    await delay(700);
+    await spotify.getState().refresh();
+    log.info(`started ${uris.length} blended tracks on ${target.name}`);
+    return { ok: true, device: target.name };
+  } catch (e) {
+    log.warn(`playUris failed: ${String(e)}`);
+    return { ok: false, error: String(e) };
+  }
+}
+
 /** Queue a track URI (starts playback first if nothing is active). */
 export async function queueTrack(
   uri: string,

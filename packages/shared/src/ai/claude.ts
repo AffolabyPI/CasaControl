@@ -108,6 +108,37 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
   { name: 'power_off_speaker', description: 'Power OFF the UE BOOM Bluetooth speaker over BLE.', input_schema: { type: 'object', properties: {} } },
   { name: 'wake_ps5', description: 'Power on the PS5 via Wake-on-LAN.', input_schema: { type: 'object', properties: {} } },
   {
+    name: 'set_light',
+    description:
+      'Control the Govee smart light (e.g. the Pixel Light). Set any of: power on/off, brightness, or an RGB colour. Provide only the fields you want to change.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        on: { type: 'boolean', description: 'Turn the light on (true) or off (false).' },
+        brightness: { type: 'integer', minimum: 1, maximum: 100, description: 'Brightness 1-100.' },
+        red: { type: 'integer', minimum: 0, maximum: 255, description: 'Red 0-255 (with green+blue).' },
+        green: { type: 'integer', minimum: 0, maximum: 255, description: 'Green 0-255.' },
+        blue: { type: 'integer', minimum: 0, maximum: 255, description: 'Blue 0-255.' },
+      },
+    },
+  },
+  {
+    name: 'shield_key',
+    description:
+      'Send a single remote-control key to the Nvidia Shield / Android TV. Use for navigation and playback: power, up, down, left, right, center (select/OK), back, home, menu, play_pause, rewind, fast_forward, volume_up, volume_down, mute.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key: {
+          type: 'string',
+          description:
+            'One of: power, up, down, left, right, center, back, home, menu, play_pause, rewind, fast_forward, volume_up, volume_down, mute.',
+        },
+      },
+      required: ['key'],
+    },
+  },
+  {
     name: 'get_status',
     description:
       'Get a fresh snapshot of the home: what is playing, volume, online devices, PS5 power. Use before answering questions about current state or after acting.',
@@ -131,6 +162,7 @@ const ACTION_SPEC: Record<CasaActionName, string> = {
   'spotify.setVolume': 'set Spotify volume — { "volume": 0-100 }',
   'spotify.transfer': 'move playback to a device — { "deviceId": string }',
   'spotify.playContext': 'start playing a track/playlist/album URI — { "uri": string }',
+  'spotify.playUris': 'start playing an explicit ordered list of track URIs — { "uris": string[] }',
   'spotify.queue': 'add a track URI to the queue — { "uri": string }',
   'spotify.resumeLocal':
     "resume playback on the tablet's local Spotify (cold-start while locked) — no params",
@@ -142,6 +174,15 @@ const ACTION_SPEC: Record<CasaActionName, string> = {
   'ps5.status': 'report PS5 power status — no params',
   'printer.print': 'print a file — optional { "deviceId": string }',
   'devices.list': 'list devices — optional { "category": "media|printer|gaming|unknown" }',
+  'govee.power': 'turn the Govee light on or off - { "on": boolean }',
+  'govee.brightness': 'set the Govee light brightness - { "value": 1-100 }',
+  'govee.color':
+    'set the Govee light colour - { "rgb": integer } where rgb = (red<<16)|(green<<8)|blue',
+  'govee.colorTemp': 'set the Govee light white temperature - { "kelvin": 2000-9000 }',
+  'govee.scene': 'activate a Govee light scene - { "sceneId": number, "paramId": number }',
+  'shield.key':
+    'send a remote key to the Nvidia Shield - { "key": "power|up|down|left|right|center|back|home|menu|play_pause|rewind|fast_forward|volume_up|volume_down|mute" }',
+  'shield.launch': 'launch an app on the Shield - { "target": "package name or deep-link uri" }',
   unknown: 'use when no action matches — { "reason": string }',
 };
 
@@ -248,6 +289,11 @@ export { extractJsonObject, extractJsonArray };
 
 const VALID_ACTIONS = new Set<string>(Object.keys(ACTION_SPEC));
 
+const SHIELD_KEYS = new Set<string>([
+  'power', 'up', 'down', 'left', 'right', 'center', 'back', 'home', 'menu',
+  'play_pause', 'rewind', 'fast_forward', 'volume_up', 'volume_down', 'mute',
+]);
+
 /** Validate/normalize a parsed object into a safe CasaAction. */
 export function coerceAction(parsed: unknown): CasaAction {
   if (typeof parsed !== 'object' || parsed === null || !('action' in parsed)) {
@@ -269,6 +315,24 @@ export function coerceAction(parsed: unknown): CasaAction {
     case 'spotify.playContext':
     case 'spotify.queue':
       return { action, uri: String(obj.uri ?? '') };
+    case 'govee.power':
+      return { action, on: Boolean(obj.on) };
+    case 'govee.brightness':
+      return { action, value: Math.max(1, Math.min(100, Number(obj.value) || 1)) };
+    case 'govee.color':
+      return { action, rgb: (Number(obj.rgb) || 0) & 0xffffff };
+    case 'govee.colorTemp':
+      return { action, kelvin: Math.max(2000, Math.min(9000, Number(obj.kelvin) || 4000)) };
+    case 'govee.scene':
+      return { action, sceneId: Number(obj.sceneId) || 0, paramId: Number(obj.paramId) || 0 };
+    case 'shield.key': {
+      const key = String(obj.key ?? '');
+      return SHIELD_KEYS.has(key)
+        ? { action, key: key as never }
+        : { action: 'unknown', reason: `Unknown Shield key "${key}"` };
+    }
+    case 'shield.launch':
+      return { action, target: String(obj.target ?? '') };
     case 'printer.print':
       return { action, deviceId: obj.deviceId ? String(obj.deviceId) : undefined };
     case 'devices.list':

@@ -334,4 +334,72 @@ export class SpotifyClient {
     if (deviceId) params.set('device_id', deviceId);
     await this.request(`/me/player/queue?${params.toString()}`, { method: 'POST' });
   }
+
+  /** The play queue: the track playing now + the upcoming tracks. */
+  async getQueue(): Promise<{ current: SpotifyTrack | null; upcoming: SpotifyTrack[] }> {
+    const { data } = await this.request<{
+      currently_playing: RawTrack | null;
+      queue: (RawTrack | null)[];
+    }>('/me/player/queue', {}, { expectJson: true });
+    return {
+      current: mapTrack(data?.currently_playing ?? null),
+      upcoming: (data?.queue ?? [])
+        .map(mapTrack)
+        .filter((t): t is SpotifyTrack => t !== null),
+    };
+  }
+
+  /** Add a track (by URI) to a playlist. */
+  async addToPlaylist(playlistId: string, uri: string): Promise<void> {
+    await this.request(`/playlists/${playlistId}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ uris: [uri] }),
+    });
+  }
+
+  /** Remove every occurrence of a track (by URI) from a playlist. */
+  async removeFromPlaylist(playlistId: string, uri: string): Promise<void> {
+    await this.request(`/playlists/${playlistId}/tracks`, {
+      method: 'DELETE',
+      body: JSON.stringify({ tracks: [{ uri }] }),
+    });
+  }
+
+  /** Track ids + URIs in a playlist (first `max`, ≤100) — for membership + blending. */
+  async getPlaylistTracks(
+    playlistId: string,
+    max = 100,
+  ): Promise<{ id: string; uri: string }[]> {
+    const { data } = await this.request<{ items: { track: RawTrack | null }[] }>(
+      `/playlists/${playlistId}/tracks?fields=items(track(id,uri))&limit=${Math.min(100, Math.max(1, max))}`,
+      {},
+      { expectJson: true },
+    );
+    return (data?.items ?? [])
+      .map((it) => it.track)
+      .filter((t): t is RawTrack => !!t && !!t.uri && !!t.id)
+      .map((t) => ({ id: t.id, uri: t.uri }));
+  }
+
+  /**
+   * Recommended tracks seeded from up to 5 track ids — used to blend suggestions
+   * into a playlist. Returns [] if Spotify's recommendations endpoint is
+   * unavailable for this app (so callers can fall back to the plain playlist).
+   */
+  async getRecommendations(seedTrackIds: string[], limit = 20): Promise<SpotifyTrack[]> {
+    const seeds = seedTrackIds.filter(Boolean).slice(0, 5).join(',');
+    if (!seeds) return [];
+    try {
+      const { data } = await this.request<{ tracks: (RawTrack | null)[] }>(
+        `/recommendations?limit=${Math.min(100, Math.max(1, limit))}&seed_tracks=${seeds}`,
+        {},
+        { expectJson: true },
+      );
+      return (data?.tracks ?? [])
+        .map(mapTrack)
+        .filter((t): t is SpotifyTrack => t !== null);
+    } catch {
+      return [];
+    }
+  }
 }

@@ -46,13 +46,21 @@ async function execute(action: CasaAction): Promise<string> {
     case 'spotify.setVolume':
     case 'spotify.transfer':
     case 'spotify.playContext':
+    case 'spotify.playUris':
     case 'spotify.queue':
     case 'spotify.resumeLocal':
     case 'system.setVolume':
     case 'speaker.wake':
     case 'speaker.sleep':
     case 'ps5.wake':
-    case 'ps5.status': {
+    case 'ps5.status':
+    case 'govee.power':
+    case 'govee.brightness':
+    case 'govee.color':
+    case 'govee.colorTemp':
+    case 'govee.scene':
+    case 'shield.key':
+    case 'shield.launch': {
       const res = await hubClient.sendCommand(action);
       if (!res.ok && 'error' in res) return `Couldn't do that: ${String(res.result ?? '')}`;
       return describe(action);
@@ -101,6 +109,20 @@ function describe(action: CasaAction): string {
       return 'Waking the PS5…';
     case 'ps5.status':
       return 'Checked the PS5 status.';
+    case 'govee.power':
+      return action.on ? 'Turned the light on.' : 'Turned the light off.';
+    case 'govee.brightness':
+      return `Set the light to ${action.value}%.`;
+    case 'govee.color':
+      return 'Changed the light colour.';
+    case 'govee.colorTemp':
+      return `Set the light to ${action.kelvin}K white.`;
+    case 'govee.scene':
+      return 'Activated that light scene.';
+    case 'shield.key':
+      return `Sent ${action.key.replace(/_/g, ' ')} to the Shield.`;
+    case 'shield.launch':
+      return 'Launching that on the Shield...';
     default:
       return 'Done.';
   }
@@ -154,10 +176,39 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       '(in-app song search is on the roadmap).'
     );
   }
+  if (name === 'set_light') {
+    const done: string[] = [];
+    if (typeof input.on === 'boolean') {
+      await execute({ action: 'govee.power', on: input.on });
+      done.push(input.on ? 'on' : 'off');
+    }
+    if (input.brightness !== undefined) {
+      const value = Math.max(1, Math.min(100, Math.round(Number(input.brightness) || 1)));
+      await execute({ action: 'govee.brightness', value });
+      done.push(`brightness ${value}%`);
+    }
+    if (input.red !== undefined || input.green !== undefined || input.blue !== undefined) {
+      const ch = (v: unknown) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)));
+      const rgb = (ch(input.red) << 16) | (ch(input.green) << 8) | ch(input.blue);
+      await execute({ action: 'govee.color', rgb });
+      done.push('colour');
+    }
+    return done.length ? `Light updated (${done.join(', ')}).` : 'No light change requested.';
+  }
+  if (name === 'shield_key') {
+    const key = String(input.key ?? '').trim();
+    if (!SHIELD_KEY_SET.has(key)) return `Unknown Shield key "${key}".`;
+    return execute({ action: 'shield.key', key: key as never });
+  }
   const build = TOOL_TO_ACTION[name];
   if (!build) return `Unknown tool: ${name}`;
   return execute(build(input));
 }
+
+const SHIELD_KEY_SET = new Set<string>([
+  'power', 'up', 'down', 'left', 'right', 'center', 'back', 'home', 'menu',
+  'play_pause', 'rewind', 'fast_forward', 'volume_up', 'volume_down', 'mute',
+]);
 
 /**
  * Continue the assistant conversation. Pass the prior `history` back each turn;

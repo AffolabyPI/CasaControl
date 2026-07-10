@@ -8,7 +8,7 @@ import {
   type SpotifyPlaylist,
   type SpotifySearchResults,
 } from '@casacontrol/shared';
-import { searchMusic, getMyPlaylists, playUri, queueUri } from '../../lib/music';
+import { searchMusic, getMyPlaylists, playUri, queueUri, playPlaylistBlended } from '../../lib/music';
 import { useSpotifyLogin, logoutSpotify } from '../../lib/spotify';
 import { useThemeColors } from '../../lib/theme';
 
@@ -81,6 +81,16 @@ export default function Search() {
     }
   };
 
+  const blend = async (uri: string, label: string) => {
+    flash(`Starting ${label} with suggestions…`);
+    try {
+      const blended = await playPlaylistBlended(uri);
+      flash(blended ? `Playing ${label} + suggestions` : `Playing ${label} (no suggestions available)`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const showingSearch = query.trim().length > 0;
 
   return (
@@ -119,7 +129,7 @@ export default function Search() {
             {results && results.contexts.length > 0 && (
               <Section title="Playlists & Albums">
                 {results.contexts.map((c) => (
-                  <ContextRow key={c.id} item={c} onPlay={play} />
+                  <ContextRow key={c.id} item={c} onPlay={play} onBlend={blend} />
                 ))}
               </Section>
             )}
@@ -146,7 +156,7 @@ export default function Search() {
             ) : playlists.length === 0 ? (
               <ActivityIndicator color={theme.gold} className="my-4" />
             ) : (
-              playlists.map((p) => <ContextRow key={p.id} item={p} onPlay={play} />)
+              playlists.map((p) => <ContextRow key={p.id} item={p} onPlay={play} onBlend={blend} />)
             )}
           </Section>
         )}
@@ -225,26 +235,42 @@ function TrackRow({
 function ContextRow({
   item,
   onPlay,
+  onBlend,
 }: {
   item: SpotifyPlaylist;
   onPlay: (uri: string, label: string) => void;
+  onBlend?: (uri: string, label: string) => void;
 }) {
   const theme = useThemeColors();
   return (
-    <Pressable
-      onPress={() => onPlay(item.uri, item.name)}
-      className="flex-row items-center py-2 active:opacity-60"
-    >
-      <Thumb url={item.imageUrl} icon={item.kind === 'album' ? 'disc' : 'list'} />
-      <View className="flex-1 ml-3">
-        <Text className="text-ink font-medium" numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text className="text-ink/50 text-xs" numberOfLines={1}>
-          {item.subtitle}
-        </Text>
-      </View>
-      <Ionicons name="play-circle" size={26} color={theme.gold} />
-    </Pressable>
+    <View className="flex-row items-center py-2">
+      <Pressable
+        onPress={() => onPlay(item.uri, item.name)}
+        className="flex-row items-center flex-1 active:opacity-60"
+      >
+        <Thumb url={item.imageUrl} icon={item.kind === 'album' ? 'disc' : 'list'} />
+        <View className="flex-1 ml-3 mr-2">
+          <Text className="text-ink font-medium" numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text className="text-ink/50 text-xs" numberOfLines={1}>
+            {item.subtitle}
+          </Text>
+        </View>
+      </Pressable>
+      {/* Playlists can play "with suggestions" — recommended songs blended in. */}
+      {onBlend && item.kind === 'playlist' ? (
+        <Pressable
+          onPress={() => onBlend(item.uri, item.name)}
+          className="p-2 mr-1 active:opacity-50"
+          hitSlop={6}
+        >
+          <Ionicons name="sparkles" size={20} color={theme.goldDark} />
+        </Pressable>
+      ) : null}
+      <Pressable onPress={() => onPlay(item.uri, item.name)} className="p-1 active:opacity-50" hitSlop={6}>
+        <Ionicons name="play-circle" size={26} color={theme.gold} />
+      </Pressable>
+    </View>
   );
 }

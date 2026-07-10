@@ -18,6 +18,10 @@ import type {
   Ps5Status,
   PrinterStatus,
   SpotifyPlaybackState,
+  GoveeDevice,
+  GoveeScene,
+  GoveeLightState,
+  ShieldStatus,
 } from '../types';
 import type { DeviceProfile } from '../devices/profiles/schema';
 import { HUB_SERVER_PORT } from '../constants';
@@ -153,6 +157,47 @@ export class HubClient {
       { method: 'POST', body: JSON.stringify(action) },
       timeoutMs,
     );
+  }
+
+  // --- Govee lights ---
+
+  /** Controllable Govee lights on the hub's account. */
+  getGoveeDevices(): Promise<GoveeDevice[]> {
+    return this.fetchJson<GoveeDevice[]>('/govee/devices');
+  }
+
+  /** Dynamic scenes for a specific light (sku+device from getGoveeDevices). */
+  getGoveeScenes(sku: string, device: string): Promise<GoveeScene[]> {
+    const q = `?sku=${encodeURIComponent(sku)}&device=${encodeURIComponent(device)}`;
+    return this.fetchJson<GoveeScene[]>(`/govee/scenes${q}`);
+  }
+
+  /** Current on/off + brightness + colour of a light. */
+  getGoveeState(sku: string, device: string): Promise<GoveeLightState> {
+    const q = `?sku=${encodeURIComponent(sku)}&device=${encodeURIComponent(device)}`;
+    return this.fetchJson<GoveeLightState>(`/govee/state${q}`);
+  }
+
+  // --- Nvidia Shield / Android TV ---
+
+  /** Current link + power state of the Shield remote. */
+  getShieldStatus(): Promise<ShieldStatus> {
+    return this.fetchJson<ShieldStatus>('/shield/status');
+  }
+
+  /** Begin pairing — the TV shows a 6-char code. Pairing can take a few seconds. */
+  shieldPairStart(): Promise<{ ok: boolean; error?: string }> {
+    return this.fetchJson('/shield/pair/start', { method: 'POST', body: '{}' }, 15_000);
+  }
+
+  /** Submit the code shown on the TV. Resolves when paired. */
+  shieldPairCode(code: string): Promise<{ ok: boolean; error?: string }> {
+    return this.fetchJson('/shield/pair/code', { method: 'POST', body: JSON.stringify({ code }) }, 15_000);
+  }
+
+  /** Open the control channel to an already-paired Shield. */
+  shieldConnect(): Promise<{ ok: boolean; error?: string }> {
+    return this.fetchJson('/shield/connect', { method: 'POST', body: '{}' }, 10_000);
   }
 
   // --- Adaptive device profiles ---

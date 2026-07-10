@@ -154,6 +154,80 @@ export interface PrinterStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Govee lights (cloud API)
+// ---------------------------------------------------------------------------
+
+/** A Govee device from the account, with the controls it advertises. */
+export interface GoveeDevice {
+  /** Product model, e.g. "H6630". Required on every control call. */
+  sku: string;
+  /** Per-device id (a MAC-like string). Required on every control call. */
+  device: string;
+  name: string;
+  type: string;
+  capabilities: {
+    power: boolean;
+    brightness: boolean;
+    colorRgb: boolean;
+    colorTemp: boolean;
+    scenes: boolean;
+  };
+}
+
+/** A selectable dynamic scene on a Govee light. */
+export interface GoveeScene {
+  name: string;
+  id: number;
+  paramId: number;
+}
+
+/** Best-effort current state of a Govee light. */
+export interface GoveeLightState {
+  online: boolean;
+  /** null when the device didn't report it. */
+  on: boolean | null;
+  /** 0-100, or null when unknown. */
+  brightness: number | null;
+  /** Packed RGB integer, or null when unknown. */
+  colorRgb: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Nvidia Shield / Android TV (native remote)
+// ---------------------------------------------------------------------------
+
+/** Connection state of the tablet's Android TV Remote link to the Shield. */
+export type ShieldLinkState = 'unpaired' | 'pairing' | 'connected' | 'disconnected';
+
+export interface ShieldStatus {
+  link: ShieldLinkState;
+  /** Host the remote is (or would be) pointed at. */
+  host: string | null;
+  /** Reported on/off power state once connected, when known. */
+  powered: boolean | null;
+  /** Foreground app package once connected, when known. */
+  currentApp: string | null;
+}
+
+/** Remote keys the phone can send to the Shield (mapped to Android keycodes). */
+export type ShieldKey =
+  | 'power'
+  | 'up'
+  | 'down'
+  | 'left'
+  | 'right'
+  | 'center'
+  | 'back'
+  | 'home'
+  | 'menu'
+  | 'play_pause'
+  | 'rewind'
+  | 'fast_forward'
+  | 'volume_up'
+  | 'volume_down'
+  | 'mute';
+
+// ---------------------------------------------------------------------------
 // Assistant actions (Bonus — Claude intent mapping)
 // ---------------------------------------------------------------------------
 
@@ -166,6 +240,9 @@ export type CasaAction =
   | { action: 'spotify.transfer'; deviceId: string }
   /** Start playback of a track/playlist/album URI on the tablet (from nothing). */
   | { action: 'spotify.playContext'; uri: string }
+  /** Start playback of an explicit ordered track list — used to blend a playlist
+   * with recommended songs. Cold-starts the tablet with the first track. */
+  | { action: 'spotify.playUris'; uris: string[] }
   /** Add a track URI to the play queue. */
   | { action: 'spotify.queue'; uri: string }
   /** Resume the tablet's LOCAL Spotify via App Remote — cold-starts playback
@@ -181,6 +258,17 @@ export type CasaAction =
   | { action: 'ps5.status' }
   | { action: 'printer.print'; deviceId?: string }
   | { action: 'devices.list'; category?: DeviceCategory }
+  /** Govee light — sku/device default to the hub's primary light when omitted. */
+  | { action: 'govee.power'; on: boolean; sku?: string; device?: string }
+  | { action: 'govee.brightness'; value: number; sku?: string; device?: string }
+  /** Set colour from a packed RGB integer. */
+  | { action: 'govee.color'; rgb: number; sku?: string; device?: string }
+  | { action: 'govee.colorTemp'; kelvin: number; sku?: string; device?: string }
+  | { action: 'govee.scene'; sceneId: number; paramId: number; sku?: string; device?: string }
+  /** Send one remote key to the Nvidia Shield / Android TV. */
+  | { action: 'shield.key'; key: ShieldKey }
+  /** Launch an app on the Shield by package name (or a deep-link URI). */
+  | { action: 'shield.launch'; target: string }
   | { action: 'unknown'; reason: string };
 
 /** Every action string, useful for building the assistant system prompt. */

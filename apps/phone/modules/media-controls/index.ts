@@ -47,3 +47,12 @@ export function addCommandListener(
     listener(e.command),
   );
 }
+
+/** Subscribe to seekbar scrubs from the notification / lock screen (position ms). */
+export function addSeekListener(
+  listener: (positionMs: number) => void,
+): EventSubscription {
+  return Native.addListener('onSeek', (e: { positionMs: number }) =>
+    listener(Math.max(0, Math.round(e.positionMs))),
+  );
+}

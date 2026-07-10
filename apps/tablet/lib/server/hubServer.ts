@@ -28,6 +28,13 @@ export interface HubHandlers {
   profileSave: (body: unknown) => Promise<unknown>;
   profileExecute: (body: unknown) => Promise<unknown>;
   profileDelete: (body: unknown) => Promise<unknown>;
+  goveeDevices: () => Promise<unknown>;
+  goveeScenes: (sku: string, device: string) => Promise<unknown>;
+  goveeState: (sku: string, device: string) => Promise<unknown>;
+  shieldStatus: () => Promise<unknown>;
+  shieldPairStart: () => Promise<unknown>;
+  shieldPairCode: (code: string) => Promise<unknown>;
+  shieldConnect: () => Promise<unknown>;
   runCommand: (action: CasaAction) => Promise<unknown>;
 }
 
@@ -219,6 +226,31 @@ export class HubServer {
       }
       if (method === 'POST' && path === '/profiles/delete') {
         return httpResponse(200, await this.handlers.profileDelete(JSON.parse(req.body || '{}')));
+      }
+      // --- Govee lights ---
+      if (method === 'GET' && path === '/govee/devices') {
+        return httpResponse(200, await this.handlers.goveeDevices());
+      }
+      if (method === 'GET' && path === '/govee/scenes') {
+        return httpResponse(200, await this.handlers.goveeScenes(query.sku ?? '', query.device ?? ''));
+      }
+      if (method === 'GET' && path === '/govee/state') {
+        return httpResponse(200, await this.handlers.goveeState(query.sku ?? '', query.device ?? ''));
+      }
+      // --- Nvidia Shield / Android TV ---
+      if (method === 'GET' && path === '/shield/status') {
+        return httpResponse(200, await this.handlers.shieldStatus());
+      }
+      if (method === 'POST' && path === '/shield/pair/start') {
+        return httpResponse(200, await this.handlers.shieldPairStart());
+      }
+      if (method === 'POST' && path === '/shield/pair/code') {
+        const code = (JSON.parse(req.body || '{}') as { code?: string }).code ?? '';
+        if (!code) return httpResponse(400, { ok: false, error: 'need code' });
+        return httpResponse(200, await this.handlers.shieldPairCode(code));
+      }
+      if (method === 'POST' && path === '/shield/connect') {
+        return httpResponse(200, await this.handlers.shieldConnect());
       }
       if (method === 'POST' && path === '/command') {
         const action = JSON.parse(req.body || '{}') as CasaAction;

@@ -19,6 +19,8 @@ import { profilesStore, useProfiles } from '../../lib/profiles';
 import { useThemeColors } from '../../lib/theme';
 import { Ps5Card } from '../../components/Ps5Card';
 import { PrinterCard } from '../../components/PrinterCard';
+import { GoveeCard } from '../../components/GoveeCard';
+import { ShieldCard } from '../../components/ShieldCard';
 import { ProfileReviewModal } from '../../components/ProfileReviewModal';
 
 const CATEGORY_META: Record<
@@ -74,6 +76,8 @@ export default function Devices() {
     <View className="mb-2">
       <Text className="text-ink/60 text-xs uppercase tracking-wider mb-2">Controls</Text>
       <Ps5Card />
+      <GoveeCard />
+      <ShieldCard />
       <PrinterCard printer={printerDevice} />
       <Pressable
         onPress={() => router.push('/profiles' as never)}

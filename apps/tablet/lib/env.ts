@@ -17,6 +17,10 @@ export const ENV = {
   lanBroadcast: process.env.EXPO_PUBLIC_LAN_BROADCAST ?? '',
   hubLocalIp: process.env.EXPO_PUBLIC_HUB_LOCAL_IP ?? '',
   hubTailscaleIp: process.env.EXPO_PUBLIC_HUB_TAILSCALE_IP ?? '',
+  goveeApiKey: process.env.EXPO_PUBLIC_GOVEE_API_KEY ?? '',
+  goveeSku: process.env.EXPO_PUBLIC_GOVEE_SKU ?? '',
+  goveeDevice: process.env.EXPO_PUBLIC_GOVEE_DEVICE ?? '',
+  shieldIp: process.env.EXPO_PUBLIC_SHIELD_IP ?? '',
 } as const;
 
 export function logEnvStatus(): void {
@@ -28,6 +32,10 @@ export function logEnvStatus(): void {
   log.info(`  LAN_BROADCAST     = ${ENV.lanBroadcast || '<empty>'}`);
   log.info(`  HUB_LOCAL_IP      = ${ENV.hubLocalIp || '<empty>'}`);
   log.info(`  HUB_TAILSCALE_IP  = ${ENV.hubTailscaleIp || '<empty>'}`);
+  log.info(`  GOVEE_API_KEY     = ${maskSecret(ENV.goveeApiKey)}`);
+  log.info(`  GOVEE_SKU         = ${ENV.goveeSku || '<empty>'}`);
+  log.info(`  GOVEE_DEVICE      = ${ENV.goveeDevice || '<empty>'}`);
+  log.info(`  SHIELD_IP         = ${ENV.shieldIp || '<empty>'}`);
   if (!ENV.spotifyClientId) {
     log.warn(
       'SPOTIFY_CLIENT_ID is empty in this bundle. If it IS set in .env, Metro ' +
