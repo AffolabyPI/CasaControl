@@ -180,6 +180,7 @@ const ACTION_SPEC: Record<CasaActionName, string> = {
     'set the Govee light colour - { "rgb": integer } where rgb = (red<<16)|(green<<8)|blue',
   'govee.colorTemp': 'set the Govee light white temperature - { "kelvin": 2000-9000 }',
   'govee.scene': 'activate a Govee light scene - { "sceneId": number, "paramId": number }',
+  'govee.diyScene': 'activate a user-created Govee DIY scene - { "value": number }',
   'shield.key':
     'send a remote key to the Nvidia Shield - { "key": "power|up|down|left|right|center|back|home|menu|play_pause|rewind|fast_forward|volume_up|volume_down|mute" }',
   'shield.launch': 'launch an app on the Shield - { "target": "package name or deep-link uri" }',
@@ -325,6 +326,8 @@ export function coerceAction(parsed: unknown): CasaAction {
       return { action, kelvin: Math.max(2000, Math.min(9000, Number(obj.kelvin) || 4000)) };
     case 'govee.scene':
       return { action, sceneId: Number(obj.sceneId) || 0, paramId: Number(obj.paramId) || 0 };
+    case 'govee.diyScene':
+      return { action, value: Number(obj.value) || 0 };
     case 'shield.key': {
       const key = String(obj.key ?? '');
       return SHIELD_KEYS.has(key)

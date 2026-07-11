@@ -6,11 +6,12 @@ import {
   rgbToInt,
   type GoveeDevice,
   type GoveeScene,
+  type GoveeDiyScene,
   type GoveeLightState,
 } from '@casacontrol/shared';
 import { hubClient } from './connection';
 
-export type { GoveeDevice, GoveeScene, GoveeLightState };
+export type { GoveeDevice, GoveeScene, GoveeDiyScene, GoveeLightState };
 
 export function fetchGoveeDevices(): Promise<GoveeDevice[]> {
   return hubClient.getGoveeDevices();
@@ -18,6 +19,10 @@ export function fetchGoveeDevices(): Promise<GoveeDevice[]> {
 
 export function fetchGoveeScenes(sku: string, device: string): Promise<GoveeScene[]> {
   return hubClient.getGoveeScenes(sku, device);
+}
+
+export function fetchGoveeDiyScenes(sku: string, device: string): Promise<GoveeDiyScene[]> {
+  return hubClient.getGoveeDiyScenes(sku, device);
 }
 
 export function fetchGoveeState(sku: string, device: string): Promise<GoveeLightState> {
@@ -45,6 +50,10 @@ export function setGoveeScene(d: GoveeDevice, scene: GoveeScene): Promise<unknow
     paramId: scene.paramId,
     ...target(d),
   });
+}
+
+export function setGoveeDiyScene(d: GoveeDevice, scene: GoveeDiyScene): Promise<unknown> {
+  return hubClient.sendCommand({ action: 'govee.diyScene', value: scene.value, ...target(d) });
 }
 
 /** A small palette of quick-pick colours for the light card. */

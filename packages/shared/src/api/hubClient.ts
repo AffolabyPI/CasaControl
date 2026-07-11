@@ -20,6 +20,7 @@ import type {
   SpotifyPlaybackState,
   GoveeDevice,
   GoveeScene,
+  GoveeDiyScene,
   GoveeLightState,
   ShieldStatus,
 } from '../types';
@@ -170,6 +171,12 @@ export class HubClient {
   getGoveeScenes(sku: string, device: string): Promise<GoveeScene[]> {
     const q = `?sku=${encodeURIComponent(sku)}&device=${encodeURIComponent(device)}`;
     return this.fetchJson<GoveeScene[]>(`/govee/scenes${q}`);
+  }
+
+  /** DIY scenes (user-created in the Govee app) for a specific light. */
+  getGoveeDiyScenes(sku: string, device: string): Promise<GoveeDiyScene[]> {
+    const q = `?sku=${encodeURIComponent(sku)}&device=${encodeURIComponent(device)}`;
+    return this.fetchJson<GoveeDiyScene[]>(`/govee/diy-scenes${q}`);
   }
 
   /** Current on/off + brightness + colour of a light. */

@@ -54,6 +54,11 @@ export function isPaired(host: string): boolean {
   return Native.isPaired(host);
 }
 
+/** The most recently paired host (persisted), or null. */
+export function pairedHost(): string | null {
+  return Native.pairedHost() ?? null;
+}
+
 export function status(): ShieldNativeStatus {
   return Native.status();
 }

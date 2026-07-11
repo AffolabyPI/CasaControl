@@ -30,6 +30,7 @@ export interface HubHandlers {
   profileDelete: (body: unknown) => Promise<unknown>;
   goveeDevices: () => Promise<unknown>;
   goveeScenes: (sku: string, device: string) => Promise<unknown>;
+  goveeDiyScenes: (sku: string, device: string) => Promise<unknown>;
   goveeState: (sku: string, device: string) => Promise<unknown>;
   shieldStatus: () => Promise<unknown>;
   shieldPairStart: () => Promise<unknown>;
@@ -233,6 +234,9 @@ export class HubServer {
       }
       if (method === 'GET' && path === '/govee/scenes') {
         return httpResponse(200, await this.handlers.goveeScenes(query.sku ?? '', query.device ?? ''));
+      }
+      if (method === 'GET' && path === '/govee/diy-scenes') {
+        return httpResponse(200, await this.handlers.goveeDiyScenes(query.sku ?? '', query.device ?? ''));
       }
       if (method === 'GET' && path === '/govee/state') {
         return httpResponse(200, await this.handlers.goveeState(query.sku ?? '', query.device ?? ''));

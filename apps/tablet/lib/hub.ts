@@ -37,8 +37,10 @@ import {
   goveeColor,
   goveeColorTemp,
   goveeScene,
+  goveeDiyScene,
   listGoveeDevices,
   listGoveeScenes,
+  listGoveeDiyScenes,
   goveeState,
 } from './goveeControl';
 import {
@@ -129,6 +131,8 @@ export async function runCommand(action: CasaAction): Promise<unknown> {
       return goveeColorTemp(action.kelvin, action.sku, action.device);
     case 'govee.scene':
       return goveeScene(action.sceneId, action.paramId, action.sku, action.device);
+    case 'govee.diyScene':
+      return goveeDiyScene(action.value, action.sku, action.device);
     case 'shield.key':
       return shieldSendKey(action.key);
     case 'shield.launch':
@@ -193,6 +197,7 @@ export function startHub(): void {
     },
     goveeDevices: listGoveeDevices,
     goveeScenes: (sku, device) => listGoveeScenes(sku || undefined, device || undefined),
+    goveeDiyScenes: (sku, device) => listGoveeDiyScenes(sku || undefined, device || undefined),
     goveeState: (sku, device) => goveeState(sku || undefined, device || undefined),
     shieldStatus: async () => shieldStatus(),
     shieldPairStart: shieldStartPairing,

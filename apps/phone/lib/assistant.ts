@@ -59,6 +59,7 @@ async function execute(action: CasaAction): Promise<string> {
     case 'govee.color':
     case 'govee.colorTemp':
     case 'govee.scene':
+    case 'govee.diyScene':
     case 'shield.key':
     case 'shield.launch': {
       const res = await hubClient.sendCommand(action);
@@ -119,6 +120,8 @@ function describe(action: CasaAction): string {
       return `Set the light to ${action.kelvin}K white.`;
     case 'govee.scene':
       return 'Activated that light scene.';
+    case 'govee.diyScene':
+      return 'Activated that DIY scene.';
     case 'shield.key':
       return `Sent ${action.key.replace(/_/g, ' ')} to the Shield.`;
     case 'shield.launch':

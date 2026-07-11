@@ -181,6 +181,12 @@ export interface GoveeScene {
   paramId: number;
 }
 
+/** A DIY scene the user created/saved in the Govee app. */
+export interface GoveeDiyScene {
+  name: string;
+  value: number;
+}
+
 /** Best-effort current state of a Govee light. */
 export interface GoveeLightState {
   online: boolean;
@@ -265,6 +271,7 @@ export type CasaAction =
   | { action: 'govee.color'; rgb: number; sku?: string; device?: string }
   | { action: 'govee.colorTemp'; kelvin: number; sku?: string; device?: string }
   | { action: 'govee.scene'; sceneId: number; paramId: number; sku?: string; device?: string }
+  | { action: 'govee.diyScene'; value: number; sku?: string; device?: string }
   /** Send one remote key to the Nvidia Shield / Android TV. */
   | { action: 'shield.key'; key: ShieldKey }
   /** Launch an app on the Shield by package name (or a deep-link URI). */

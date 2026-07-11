@@ -11,7 +11,7 @@
  *
  * Docs: https://developer.govee.com/reference/control-you-devices
  */
-import type { GoveeDevice, GoveeScene, GoveeLightState } from '../types';
+import type { GoveeDevice, GoveeScene, GoveeDiyScene, GoveeLightState } from '../types';
 
 const BASE_URL = 'https://openapi.api.govee.com';
 
@@ -22,6 +22,7 @@ const CAP = {
   colorRgb: { type: 'devices.capabilities.color_setting', instance: 'colorRgb' },
   colorTempK: { type: 'devices.capabilities.color_setting', instance: 'colorTemperatureK' },
   scene: { type: 'devices.capabilities.dynamic_scene', instance: 'lightScene' },
+  diyScene: { type: 'devices.capabilities.dynamic_scene', instance: 'diyScene' },
 } as const;
 
 /** Encode an 0-255 RGB triple into the single integer Govee expects. */
@@ -159,6 +160,32 @@ export class GoveeController {
       .filter((s) => s.id > 0);
   }
 
+  /**
+   * The device's DIY scenes — the effects the user created/saved in the Govee
+   * app (distinct from the built-in dynamic scenes). Value here is a single id.
+   */
+  async listDiyScenes(sku: string, device: string): Promise<GoveeDiyScene[]> {
+    const data = await this.call<{ payload?: { capabilities?: RawCapability[] } }>(
+      '/router/api/v1/device/diy-scenes',
+      'POST',
+      { requestId: reqId(), payload: { sku, device } },
+    );
+    const cap = (data.payload?.capabilities ?? []).find(
+      (c) => c.type === CAP.diyScene.type && c.instance === CAP.diyScene.instance,
+    );
+    const opts = cap?.parameters?.options ?? [];
+    return opts
+      .map((o) => {
+        // DIY values come back as a bare number on most accounts, but tolerate an
+        // object form ({value}/{id}) just in case.
+        const raw = o.value as number | { value?: number; id?: number };
+        const value =
+          typeof raw === 'number' ? raw : Number(raw?.value ?? raw?.id ?? 0);
+        return { name: o.name ?? 'DIY', value };
+      })
+      .filter((s) => s.value > 0);
+  }
+
   /** Current on/off + brightness + colour, best-effort. */
   async getState(sku: string, device: string): Promise<GoveeLightState> {
     const data = await this.call<{ payload?: { capabilities?: RawCapability[] } }>(
@@ -205,5 +232,10 @@ export class GoveeController {
   /** Activate a dynamic scene (from listScenes). */
   setScene(sku: string, device: string, sceneId: number, paramId: number): Promise<unknown> {
     return this.control(sku, device, CAP.scene, { id: sceneId, paramId });
+  }
+
+  /** Activate a DIY scene (from listDiyScenes). */
+  setDiyScene(sku: string, device: string, value: number): Promise<unknown> {
+    return this.control(sku, device, CAP.diyScene, value);
   }
 }

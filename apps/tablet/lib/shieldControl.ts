@@ -13,6 +13,7 @@ import {
   sendKey,
   launchApp,
   isPaired,
+  pairedHost,
   status as nativeStatus,
 } from '../modules/androidtv-remote';
 import { ENV } from './env';
@@ -49,17 +50,26 @@ function discoveredShieldIp(): string | null {
   return d?.ip ?? null;
 }
 
+/**
+ * Resolve the Shield host. Prefer an explicit env pin, then live discovery, then
+ * the last host we actually paired with (persisted natively). The persisted
+ * fallback is what keeps commands working when discovery momentarily drops the
+ * Shield between LAN scans - the cause of the intermittent "not paired yet".
+ */
 export function shieldHost(): string | null {
-  return ENV.shieldIp || discoveredShieldIp();
+  return ENV.shieldIp || discoveredShieldIp() || pairedHost();
 }
 
 export function shieldStatus(): ShieldStatus {
   const host = shieldHost();
   const s = nativeStatus();
-  // Prefer the live native link; fall back to a paired-but-idle hint.
+  const paired = host ? isPaired(host) : false;
   let link = s.link as ShieldStatus['link'];
-  if (link === 'disconnected' && host && isPaired(host)) link = 'disconnected';
-  if (link === 'disconnected' && host && !isPaired(host)) link = 'unpaired';
+  // Never-paired: always show 'unpaired' when idle. Paired-but-idle: 'disconnected'.
+  if (!paired && link !== 'pairing') link = 'unpaired';
+  else if (paired && (link === 'unpaired' || link === 'disconnected')) {
+    link = s.link === 'connected' ? 'connected' : 'disconnected';
+  }
   return {
     link,
     host: s.host ?? host,
@@ -94,24 +104,29 @@ export async function shieldSubmitCode(code: string): Promise<{ ok: boolean; err
 
 export async function shieldSendKey(key: ShieldKey): Promise<{ ok: boolean; error?: string }> {
   const host = shieldHost();
-  if (!host) return { ok: false, error: 'No Shield configured' };
-  if (!isPaired(host)) return { ok: false, error: 'Shield not paired yet - pair it first' };
+  if (!host) return { ok: false, error: 'No Shield found on the network' };
+  // Don't hard-gate on isPaired: LAN discovery flux made that give false
+  // "not paired" errors. Instead ensure the (cert-authenticated) connection and
+  // send; only report "pair it first" if we've genuinely never paired.
   try {
+    await connect(host);
     await sendKey(KEYCODES[key]);
     return { ok: true };
   } catch (e) {
+    if (!isPaired(host)) return { ok: false, error: 'Shield not paired yet - pair it first' };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
 
 export async function shieldLaunch(target: string): Promise<{ ok: boolean; error?: string }> {
   const host = shieldHost();
-  if (!host) return { ok: false, error: 'No Shield configured' };
-  if (!isPaired(host)) return { ok: false, error: 'Shield not paired yet - pair it first' };
+  if (!host) return { ok: false, error: 'No Shield found on the network' };
   try {
+    await connect(host);
     await launchApp(target);
     return { ok: true };
   } catch (e) {
+    if (!isPaired(host)) return { ok: false, error: 'Shield not paired yet - pair it first' };
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }

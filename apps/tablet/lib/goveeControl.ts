@@ -6,7 +6,14 @@
  * sku+device. The device list is cached briefly to avoid hammering the cloud API
  * (which is rate-limited) on every control tap.
  */
-import { GoveeController, createLogger, type GoveeDevice, type GoveeScene, type GoveeLightState } from '@casacontrol/shared';
+import {
+  GoveeController,
+  createLogger,
+  type GoveeDevice,
+  type GoveeScene,
+  type GoveeDiyScene,
+  type GoveeLightState,
+} from '@casacontrol/shared';
 import { ENV } from './env';
 
 const log = createLogger('govee');
@@ -58,6 +65,11 @@ export async function listGoveeScenes(sku?: string, device?: string): Promise<Go
   return client().listScenes(t.sku, t.device);
 }
 
+export async function listGoveeDiyScenes(sku?: string, device?: string): Promise<GoveeDiyScene[]> {
+  const t = await resolveTarget(sku, device);
+  return client().listDiyScenes(t.sku, t.device);
+}
+
 export async function goveeState(sku?: string, device?: string): Promise<GoveeLightState> {
   const t = await resolveTarget(sku, device);
   return client().getState(t.sku, t.device);
@@ -96,5 +108,11 @@ export async function goveeScene(
 ): Promise<{ ok: true }> {
   const t = await resolveTarget(sku, device);
   await client().setScene(t.sku, t.device, sceneId, paramId);
+  return { ok: true };
+}
+
+export async function goveeDiyScene(value: number, sku?: string, device?: string): Promise<{ ok: true }> {
+  const t = await resolveTarget(sku, device);
+  await client().setDiyScene(t.sku, t.device, value);
   return { ok: true };
 }

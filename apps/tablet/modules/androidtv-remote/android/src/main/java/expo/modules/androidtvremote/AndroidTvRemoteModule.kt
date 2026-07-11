@@ -275,6 +275,10 @@ class AndroidTvRemoteModule : Module() {
 
     Function("isPaired") { h: String -> pairedHosts().contains(h) }
 
+    // The most recently paired host (persisted) — lets the hub resolve a stable
+    // target even when live LAN discovery momentarily drops the Shield.
+    Function("pairedHost") { pairedHosts().firstOrNull() }
+
     Function("status") {
       mapOf("link" to link, "host" to host, "powered" to powered)
     }
